@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<!--
+
+3DS Homebrew Title Database
+
+API: http://192.168.42.20:6543/v0/
+
+Interface accepts json via POST, and provides simplified
+interaction with GET. Multiple commands may be combined as a list. 
+
+You must provide a User-Agent header with your request
+(e.g. httpcAddRequestHeaderField(&context, (char*)"User-Agent", (char*)"Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 YourAppName/1.4.13"); )
+Please try to make it unique to your application.
+
+Consider the current (v0) API implementation to be unstable, it may change 
+without notice until the primary features are fully implemented.
+
+If you use this your project, please include a mention including the website name, 
+stylized as TitleDB.com or link back to the main website, whichever is applicable.
+
+Contact me on reddit as /u/codepoet82 or ken(a)intherack.com if you have any
+questions, or would like to help somehow. Particularly, assistance from 
+someone who knows JS/HTML/CSS is desperately needed!
+
+
+----
+
+The default GET is equivelent to a POST of:
+{ "action": "list", "fields": ["name", "description", "author", "titleid", "url"] }
+
+Some example GET commands are:
+http://192.168.42.20:6543/v0/redirect/<TITLEID> will auto-redirect to the current url for the requested title ID.
+http://192.168.42.20:6543/v0/proxy/<TITLEID> will either redirect or proxy-extract from an archive as required.
+https://api.titledb.com/images/<TITLEID>.png will provide the 'icon_large' field decoded and converted to a .png
+
+
+Some example JSON commands that can be used are:
+{ "action": "list_fields" }
+{ "action": "list", "fields": ["field1", "field2", ... ], "where": { "field": "value", ... } }
+{ "action": "add", "url": "http://example.com/installable.cia" }
+
+Binary data (currently just 'icon_large' and 'icon_small') is zlib compressed, then base64 encoded.
+
+Returns will all be JSON, failures will return with { "error": "Error description" }
+
+----
+
+Web UI originally based on 'that titlekeys site'.
+
+-->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>3DS Homebrew Title Database</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="old-css/bootstrapValidator.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.11/css/dataTables.bootstrap.min.css">
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <style>
+        td.monospace-text {
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <h1>3DS Homebrew Title Database</h1>
+
+    View this page's source for details regarding API use in your own projects.
+
+    <h3>Add a new title</h3>
+    <div class="col-sm-12">
+        <form id="urlForm" class="form-horizontal" method="post" action="http://192.168.42.20:6543/v0/">
+            <div class="form-group-lg">
+                <label class="col-sm-2 control-label" for="url">CIA or Archive URL:</label>
+                <div class="col-sm-10">
+                    <input type="hidden" name="action" value="add">
+                    <input name="url" type="url" class="form-control" id="url" size="20" maxlength="4096" placeholder="http://example.com/installable.cia or http://example.com/archive.zip">
+                </div>
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="submit" class="btn btn-lg btn-success">Send</button>
+                </div>
+            </div>
+        </form>
+
+   </div>
+
+    <h2>Titles</h2>
+
+    <table id="table" class="table table-bordered">
+        <thead><tr>
+            <th>Icon</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Author</th>
+            <th>Title ID</th>
+            <th>Size</th>
+            <th>URL</th>
+        </tr></thead>
+        <tbody>
+
+        </tbody>
+        <tfoot><tr>
+            <th>Icon</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Author</th>
+            <th>Title ID</th>
+            <th>Size</th>
+            <th>URL</th>
+        </tr></tfoot>
+    </table>
+All extracted graphics, logos, and trademarks are property of their respective owners.
+</div>
+
+
+<div class="modal fade" id="qrModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">Scan QR with FBI to install.</h4>
+            </div>
+            <div class="modal-body" id="qrcode">
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+<script src="old-js/bootstrapValidator.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.2/toastr.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.11/js/jquery.dataTables.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.11/js/dataTables.bootstrap.min.js"></script>
+<script src="old-js/filesize.min.js"></script>
+<script type="text/javascript">
+
+    $(function() {
+        var dataTable = $("table").DataTable({
+            dom: "<'row'<'filters col-sm-6'l><'col-sm-6'f>" +
+            "<'row'<'col-sm-12'tr>>" +
+            "<'row'<'col-sm-5'i><'col-sm-7'p>>",
+            "ajax": {
+                "url": "/v0/",
+                "dataSrc": ""
+            },
+            "order": [[ 1, "asc" ]],
+            "pageLength": 25,
+            "columns": [
+                {
+                    targets: -1,
+                    "data": null,
+                    "defaultContent": "",
+                    render : function(data, type, row, meta) {
+                        if (type === 'display') {
+                            return '<img src="/v0/images/'+row.titleid+'.png">';
+                        }
+                    }
+                },
+		{ "data" : "name" },
+                { "data" : "description" },
+                { "data" : "author" },
+                {
+                    "data" : "titleid",
+                    "sClass": "monospace-text",
+                    "sWidth": "9em"
+                },
+                {
+                    "data" : "size",
+                    render : function(data, type, row, meta) {
+                        if (type === 'display' && data != null) {
+                            return filesize(data, {spacer: "&nbsp;"});
+                        }
+                        return data;
+                    }
+                },
+		{
+                    "data" : "url",
+                    render : function(data, type, row, meta) {
+                        if (type === 'display' && data != null) {
+                            return '<button class="qr btn btn-info btn-sm"><span class="glyphicon glyphicon-qrcode"></span></button> ' + '<a href="' + data + '">' + data + '</a>';
+                        }
+                        return data;
+                    }
+                }
+            ]
+        });
+        toastr.options = {
+            "closeButton": false,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": false,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        }
+
+        $("#table").on('click', '.qr', function() {
+            var row = $(this).parent().siblings();
+
+            $("#qrcode").empty().qrcode({
+                //text: $.trim($(this).parent().text()),
+		text: 'http://192.168.42.20:6543/v0/proxy/' + $.trim(row.eq(4).text()),
+                width: 500,
+                height: 500
+            });
+            $("#qrcode canvas").addClass("img-responsive");
+            $("#qrModal").modal('show');
+        });
+
+	$.fn.serializeObject = function () {
+		var o = {};
+		var a = this.serializeArray();
+		$.each(a, function () {
+			if (o[this.name] !== undefined) {
+				if (!o[this.name].push) {
+					o[this.name] = [o[this.name]];
+				}
+				o[this.name].push(this.value || '');
+			} else {
+				o[this.name] = this.value || '';
+			}
+		});
+		return o;
+	};
+
+        $('#urlForm')
+                .bootstrapValidator({
+                    message: 'This value is not valid',
+                    feedbackIcons: {
+                        valid: 'glyphicon glyphicon-ok',
+                        invalid: 'glyphicon glyphicon-remove',
+                        validating: 'glyphicon glyphicon-refresh'
+                    },
+                    fields: {
+                        url: {
+                            message: 'The URL is not valid',
+                            validators: {
+                                notEmpty: {
+                                    message: 'The URL is required and can\'t be empty'
+                                },
+                                stringLength: {
+                                    max: 4096,
+                                    message: 'The URL can only be up to 4K in length.'
+                                },
+                                regexp: {
+                                    regexp: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)$/,
+                                    message: 'The URL does not appear to be valid.'
+                                }
+                            }
+                        },
+                    }
+                })
+                .on('success.form.bv', function(e) {
+                    // Prevent form submission
+                    e.preventDefault();
+                    // Get the form instance
+                    var $form = $(e.target);
+                    // Get the BootstrapValidator instance
+                    var bv = $form.data('bootstrapValidator');
+                    // Use Ajax to submit form data
+                    $.post($form.attr('action'), JSON.stringify($form.serializeObject()), function(result) {
+                        console.log(result);
+                        if (result.error) {
+                            toastr.warning(result.error, "Submission Error");
+                        } else {
+                            toastr.success("Found " + result.name, "Submission Success");
+                        }
+                    }, 'json');
+                });
+    });
+</script>
+</body>
+</html>
+

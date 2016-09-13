@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Login Form</title>
+</head>
+<body>
+<h1>Login</h1>
+
+
+<form action="http://192.168.42.20:6543/login" method="post">
+    <input type="hidden" name="came_from"
+           value="/"/>
+    <label for="login">Username</label>
+    <input type="text" id="login"
+           name="login"
+           value=""/><br/>
+    <label for="password">Password</label>
+    <input type="password" id="password"
+           name="password"
+           value=""/><br/>
+    <input type="submit" name="form.submitted"
+           value="Log In"/>
+</form>
+
+</body>
+</html>

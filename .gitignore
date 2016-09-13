@@ -1,0 +1,6 @@
+db/
+.cache/
+private/
+titledb.egg-info/
+**/*.bak
+**/*.backup
