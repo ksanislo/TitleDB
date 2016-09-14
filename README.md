@@ -1,3 +1,3 @@
 # TitleDB.com
 
-TitleDB.com API and web interface rewrite as a proper python WSGI application.
+TitleDB.com API rewritten as a proper Python WSGI application.
