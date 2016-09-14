@@ -131,7 +131,9 @@ class BaseView(object):
 
     def delete_item(self):
         DBSession.delete(self.item)
-        return HTTPOk()
+        return Response(
+            status='202 Accepted',
+            content_type='application/json; charset=UTF-8')
 
 
 @register_views(route='nested_v1', collection_route='nested_collection_v1')
