@@ -75,14 +75,17 @@ class register_views(object):
             cls = view_config(_depth=1, renderer='json', attr='read_item',
                 request_method='GET', route_name=self.route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='update_item',
-                request_method='PUT', route_name=self.route, permission='edit')(cls)
+                #request_method='PUT', route_name=self.route, permission='edit')(cls)
+                request_method='PUT', route_name=self.route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='delete_item',
-                request_method='DELETE', route_name=self.route, permission='edit')(cls)
+                #request_method='DELETE', route_name=self.route, permission='edit')(cls)
+                request_method='DELETE', route_name=self.route)(cls)
         if self.collection_route:
             cls = view_config(_depth=1, renderer='json', attr='list_items',
                 request_method='GET', route_name=self.collection_route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='create_item',
-                request_method='POST', route_name=self.collection_route, permission='edit')(cls)
+                #request_method='POST', route_name=self.collection_route, permission='edit')(cls)
+                request_method='POST', route_name=self.collection_route)(cls)
         return cls
 
 
@@ -100,7 +103,7 @@ class BaseView(object):
             self.item = item
 
     def create_item(self):
-        data = self.schema_cls().deserialize(self.request.json_body)
+        data, errors = self.schema_cls().load(self.request.json_body)
         item = self.item_cls(**data)
         DBSession.add(item)
         DBSession.flush()
@@ -120,7 +123,7 @@ class BaseView(object):
         return self.item
 
     def update_item(self):
-        data = self.schema_cls().deserialize(self.request.json_body)
+        data, errors = self.schema_cls().load(self.request.json_body)
         for key, value in data.items():
             setattr(self.item, key, value)
         self.request.render_schema = self.schema_cls()
