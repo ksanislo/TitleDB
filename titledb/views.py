@@ -51,6 +51,8 @@ from .models import (
     AssetsSchemaNested,
     Category,
     CategorySchema,
+    Submission,
+    SubmissionSchema,
     User,
     Group
 )
@@ -187,6 +189,11 @@ class AssetsView(BaseView):
 class CategoryView(BaseView):
     item_cls = Category
     schema_cls = CategorySchema
+
+@register_views(route='submission_v1', collection_route='category_submission_v1')
+class SubmissionView(BaseView):
+    item_cls = Submission
+    schema_cls = SubmissionSchema
 
 
 @view_defaults(renderer='json')

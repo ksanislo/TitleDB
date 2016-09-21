@@ -289,8 +289,15 @@ class CategorySchema(RenderSchema):
     updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
     class Meta:
         ordered = True
-        dump_only = ['id']
+        dump_only = ['id','created_at','updated_at']
         exclude = ['created_at','updated_at']
+
+class Submission(GenericBase):
+    __tablename__ = 'submission'
+    url = Column(Text)
+
+class SubmissionSchema(GenericSchema):
+    url = fields.URL()
 
 class User(GenericBase):
     __tablename__ = 'users'
