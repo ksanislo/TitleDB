@@ -41,13 +41,12 @@ class GenericBase(AbstractConcreteBase, Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 class GenericSchema(RenderSchema):
-    id = fields.Integer()
+    id = fields.Integer(dump_only=True)
     active = fields.Bool()
-    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
+    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
+    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
     class Meta:
         ordered = True
-        dump_only = ['id','created_at','updated_at']
         exclude = ['created_at','updated_at']
 
 class FileBase(GenericBase, AbstractConcreteBase):
@@ -153,19 +152,18 @@ class CIA_v0(Base):
     update_time = CIA.__table__.c.updated_at
 
 class CIASchema_v0(RenderSchema):
-    id = fields.Integer()
-    titleid = fields.String()
-    name = fields.String()
-    description = fields.String()
-    author = fields.String()
-    size = fields.Integer()
-    mtime = fields.Function(lambda obj: int(obj.mtime.strftime('%s')))
-    url = fields.URL()
-    create_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S')
-    update_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S')
+    id = fields.Integer(dump_only=True)
+    titleid = fields.String(dump_only=True)
+    name = fields.String(dump_only=True)
+    description = fields.String(dump_only=True)
+    author = fields.String(dump_only=True)
+    size = fields.Integer(dump_only=True)
+    mtime = fields.Function(lambda obj: int(obj.mtime.strftime('%s')), dump_only=True)
+    url = fields.URL(dump_only=True)
+    create_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
+    update_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
     class Meta:
         ordered = True
-        dump_only = ['id', 'active', 'titleid', 'name', 'description', 'author', 'size', 'mtime', 'url', 'create_time', 'update_time']
 
 class TDSX(FileBase):
     __tablename__ = 'tdsx'
@@ -294,6 +292,7 @@ class CategorySchema(RenderSchema):
 
 class Submission(GenericBase):
     __tablename__ = 'submission'
+    active = Column(Boolean, default=True)
     url = Column(Text)
 
 class SubmissionSchema(GenericSchema):
@@ -309,9 +308,3 @@ class Group(GenericBase):
     __tablename__ = 'groups'
     name = Column(Text)
  
-class Root(object):
-    __acl__ = [(Allow, Everyone, 'view'),
-               (Allow, 'group:editors', 'edit')]
-
-    def __init__(self, request):
-        pass

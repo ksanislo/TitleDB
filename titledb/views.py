@@ -80,8 +80,8 @@ class register_views(object):
                 #request_method='PUT', route_name=self.route, permission='edit')(cls)
                 request_method='PUT', route_name=self.route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='delete_item',
-                #request_method='DELETE', route_name=self.route, permission='edit')(cls)
-                request_method='DELETE', route_name=self.route)(cls)
+                request_method='DELETE', route_name=self.route, permission='super')(cls)
+                #request_method='DELETE', route_name=self.route)(cls)
         if self.collection_route:
             cls = view_config(_depth=1, renderer='json', attr='list_items',
                 request_method='GET', route_name=self.collection_route)(cls)
@@ -113,19 +113,30 @@ class BaseView(object):
         return item
 
     def list_items(self):
-        data = DBSession.query(self.item_cls).all()
-        self.request.render_schema = self.schema_cls(many=True)
+        data = DBSession.query(self.item_cls).filter(self.item_cls.active == True).all()
+        if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
+            self.request.render_schema = self.nested_cls(many=True)
+        else:
+            self.request.render_schema = self.schema_cls(many=True)
         return data
 
     def read_item(self):
-        if self.nested_cls:
-            self.request.render_schema = self.nested_cls()
-        else:
+        #raise
+        if not self.nested_cls or (self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'false'):
             self.request.render_schema = self.schema_cls()
+        else:
+            self.request.render_schema = self.nested_cls()
         return self.item
 
     def update_item(self):
-        data, errors = self.schema_cls().load(self.request.json_body)
+        if 'group:super' in self.request.effective_principals:
+            data, errors = self.schema_cls().load(self.request.json_body)
+        elif self.moderator_cls and 'group:moderator' in self.request.effective_principals:
+            data, errors = self.moderator_cls().load(self.request.json_body)
+        else
+            data, errors = self.schema_cls(dump_only=tuple(self.nested_cls._declared_fields.keys())).load(self.request.json_body)
+            
+
         for key, value in data.items():
             setattr(self.item, key, value)
         self.request.render_schema = self.schema_cls()
@@ -137,11 +148,6 @@ class BaseView(object):
             status='202 Accepted',
             content_type='application/json; charset=UTF-8')
 
-
-@register_views(route='nested_v1', collection_route='nested_collection_v1')
-class EntryViewNested(BaseView):
-    item_cls = Entry
-    schema_cls = EntrySchemaNested
 
 @register_views(route='entry_v1', collection_route='entry_collection_v1')
 class EntryView(BaseView):
@@ -190,11 +196,10 @@ class CategoryView(BaseView):
     item_cls = Category
     schema_cls = CategorySchema
 
-@register_views(route='submission_v1', collection_route='category_submission_v1')
+@register_views(route='submission_v1', collection_route='submission_collection_v1')
 class SubmissionView(BaseView):
     item_cls = Submission
     schema_cls = SubmissionSchema
-
 
 @view_defaults(renderer='json')
 class TitleDBViews:
@@ -207,10 +212,6 @@ class TitleDBViews:
     @view_config(route_name='home')
     def home(self):
         return {'api_version': self.active_version}
-
-    @view_config(route_name='add_v1')
-    def add(self):
-        return {'name': 'Add View'}
 
     @view_config(route_name='cia_collection_v0', renderer='json')
     def legacy_list_v0(self):

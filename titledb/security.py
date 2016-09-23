@@ -19,14 +19,7 @@ def check_password(pw, hashed_pw):
     expected_hash = hashed_pw.encode('utf8')
     return bcrypt.checkpw(pw.encode('utf8'), expected_hash)
 
-
-USERS = {'editor': hash_password('editor'),
-         'viewer': hash_password('viewer')}
-GROUPS = {'editor': ['group:editors']}
-
-
 def authtkt_callback(userid, request):
-
     try:
         userquery = DBSession.query(User).filter_by(name=userid,active=True).one()
     except NoResultFound:

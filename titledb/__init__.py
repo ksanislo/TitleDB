@@ -40,11 +40,8 @@ def main(global_config, **settings):
     config.add_route('proxy_v0', '/v0/proxy/{titleid:00040000[0-9A-Fa-f]{8}}')
     config.add_route('redirect_v0', '/v0/redirect/{titleid:00040000[0-9A-Fa-f]{8}}')
 
-    config.add_route('nested_v1', '/v1/{id:\d+}')
-    config.add_route('nested_collection_v1', '/v1/')
-
-    config.add_route('entry_v1', '/v1/entry/{id:\d+}')
-    config.add_route('entry_collection_v1', '/v1/entry')
+    config.add_route('entry_v1', '/v1/{x:(entry/)?}{id:\d+}')
+    config.add_route('entry_collection_v1', '/v1/{x:(entry)?}')
     config.add_route('cia_v1', '/v1/cia/{id:\d+}')
     config.add_route('cia_collection_v1', '/v1/cia')
     config.add_route('3dsx_v1', '/v1/tdsx/{id:\d+}')
@@ -59,8 +56,8 @@ def main(global_config, **settings):
     config.add_route('assets_collection_v1', '/v1/assets')
     config.add_route('category_v1', '/v1/category/{id:\d+}')
     config.add_route('category_collection_v1', '/v1/category')
-
-    config.add_route('add_v1', '/v1/add')
+    config.add_route('submission_v1', '/v1/submission/{id:\d+}')
+    config.add_route('submission_collection_v1', '/v1/submission')
 
     config.add_route('png_image_v1', '/v1/images/{titleid:00040000[0-9A-Fa-f]{8}}.png')
     config.add_route('proxy_v1', '/v1/proxy/{titleid:00040000[0-9A-Fa-f]{8}}')
