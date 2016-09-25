@@ -19,5 +19,6 @@ setup(name='titledb',
       [console_scripts]
       initialize_titledb_db = titledb.initialize_db:main
       update_titledb_db = titledb.update_db:main
+      titledb_cli = titledb.cli:main
       """,
 )
