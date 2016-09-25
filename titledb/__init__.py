@@ -33,12 +33,10 @@ def main(global_config, **settings):
     config.set_authorization_policy(authz_policy)
 
     config.add_route('home', '/')
-    config.add_route('png_image', '/images/{titleid:00040000[0-9A-Fa-f]{8}}.png')
 
     config.add_route('cia_collection_v0', '/v0/')
-    config.add_route('png_image_v0', '/v0/images/{titleid:00040000[0-9A-Fa-f]{8}}.png')
+    config.add_route('png_image_v0', '/{x:(v0/)?}images/{titleid:00040000[0-9A-Fa-f]{8}}.png')
     config.add_route('proxy_v0', '/v0/proxy/{titleid:00040000[0-9A-Fa-f]{8}}')
-    config.add_route('redirect_v0', '/v0/redirect/{titleid:00040000[0-9A-Fa-f]{8}}')
 
     config.add_route('entry_v1', '/v1/{x:(entry/)?}{id:\d+}')
     config.add_route('entry_collection_v1', '/v1/{x:(entry)?}')
@@ -59,9 +57,6 @@ def main(global_config, **settings):
     config.add_route('submission_v1', '/v1/submission/{id:\d+}')
     config.add_route('submission_collection_v1', '/v1/submission')
 
-    config.add_route('png_image_v1', '/v1/images/{titleid:00040000[0-9A-Fa-f]{8}}.png')
-    config.add_route('proxy_v1', '/v1/proxy/{titleid:00040000[0-9A-Fa-f]{8}}')
-    config.add_route('redirect_v1', '/v1/redirect/{titleid:00040000[0-9A-Fa-f]{8}}')
     config.add_route('time_v1', '/v1/time')
     config.add_route('login_v1', '/v1/login')
     config.add_route('logout_v1', '/v1/logout')

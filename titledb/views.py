@@ -49,6 +49,7 @@ from .models import (
     Assets,
     AssetsSchema,
     AssetsSchemaNested,
+    AssetsSchemaModerator,
     Category,
     CategorySchema,
     Submission,
@@ -225,6 +226,7 @@ class AssetsView(BaseView):
     item_cls = Assets
     schema_cls = AssetsSchema
     nested_cls = AssetsSchemaNested
+    moderator_cls = AssetsSchemaModerator
 
 @register_views(route='category_v1', collection_route='category_collection_v1')
 class CategoryView(BaseView):
@@ -297,9 +299,7 @@ class TitleDBViews:
         logged_in = request.authenticated_userid
         return dict(login=logged_in)
 
-    @view_config(route_name='png_image')
     @view_config(route_name='png_image_v0')
-    @view_config(route_name='png_image_v1')
     def png_image(self):
         request = self.request
         if request.matchdict and request.matchdict['titleid']:
@@ -311,19 +311,17 @@ class TitleDBViews:
                                 body=create_png_from_icon(cia.icon_l))
         return dict(error='TitleID not found.')
 
-    @view_config(route_name='redirect_v0')
-    @view_config(route_name='redirect_v1')
-    def redirect_to_url(self):
-        request = self.request
-        if request.matchdict and request.matchdict['titleid']:
-            titleid = request.matchdict['titleid']
-            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).first()
-            if cia:
-                return HTTPFound(location=cia.url)
-        return dict(error='TitleID not found.')
+    #@view_config(route_name='redirect_v0')
+    #def redirect_to_url(self):
+    #    request = self.request
+    #    if request.matchdict and request.matchdict['titleid']:
+    #        titleid = request.matchdict['titleid']
+    #        cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).first()
+    #        if cia:
+    #            return HTTPFound(location=cia.url)
+    #    return dict(error='TitleID not found.')
 
     @view_config(route_name='proxy_v0')
-    @view_config(route_name='proxy_v1')
     def proxy_or_redirect_cia(self):
         request = self.request
         if request.matchdict and request.matchdict['titleid']:

@@ -253,6 +253,12 @@ class AssetsSchemaNested(AssetsSchema):
     tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','assets_id','assets'])
     arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','assets_id','assets'])
 
+class AssetsSchemaModerator(AssetsSchema):
+    class Meta:
+        ordered = True
+        exclude = ['created_at','updated_at']
+        dump_only = ['version','size','mtime','url','path','etag','sha256']
+
 class Category(GenericBase):
     __tablename__ = 'category'
     name = Column(Text)
