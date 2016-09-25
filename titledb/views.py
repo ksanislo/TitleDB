@@ -90,6 +90,8 @@ class register_views(object):
 
 
 class BaseView(object):
+    read_only = True # Read only view by default
+
     item_cls = None
     schema_cls = None
     nested_cls = None
@@ -108,36 +110,50 @@ class BaseView(object):
 
         if self.request.method == 'GET':
             if request.matched_route.name == self.item_route:
-                # Set the active schema for items
+                # Set the active_schema for items
                 if not self.nested_cls or (self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'false'):
                     self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
                 else:
                     self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
             else:
-                # Set the active schema for lists
+                # Set the active_schema for lists
                 if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
                     self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'),many=True)
                 else:
                     self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'),many=True)
-        else:
+        else: # POST/PUT requests land here
             if 'group:super' in self.request.effective_principals:
                 self.active_schema = self.schema_cls()
             elif self.moderator_cls and 'group:mod' in self.request.effective_principals:
                 self.active_schema = self.moderator_cls()
+            elif not self.moderator_cls and self.request.method == 'PUT' and 'group:mod' in self.request.effective_principals:
+                all_fields = list(self.schema_cls._declared_fields.keys())
+                all_fields.remove('active') # Allow moderators to toggle "active" by default
+                self.active_schema = self.schema_cls(dump_only=all_fields)
             elif self.everyone_cls and self.request.method == 'POST':
                 self.active_schema = self.everyone_cls()
-            else:
+            else: # No preferred schema found, so set everything as dump_only
                 all_fields = tuple(self.schema_cls._declared_fields.keys())
                 self.active_schema = self.schema_cls(dump_only=all_fields)
 
+            # Check if our active_schema has any writable records, and adjust read_only as required.
+            for field in self.active_schema.declared_fields:
+                if not self.active_schema.declared_fields[field].dump_only:
+                    self.read_only = False
+                    break
 
     def create_item(self):
-        data, errors = self.active_schema.load(self.request.json_body)
-        item = self.item_cls(**data)
-        DBSession.add(item)
-        DBSession.flush()
-        self.request.render_schema = self.active_schema
-        return item
+        if not self.read_only:
+            data, errors = self.active_schema.load(self.request.json_body)
+            if errors:
+                return errors
+            item = self.item_cls(**data)
+            DBSession.add(item)
+            DBSession.flush()
+            self.request.render_schema = self.active_schema
+            return item
+        else:
+            return TitleDBViews.forbidden(self)
 
     def list_items(self):
         data = DBSession.query(self.item_cls).filter(self.item_cls.active == True).all()
@@ -149,11 +165,16 @@ class BaseView(object):
         return self.item
 
     def update_item(self):
-        data, errors = self.active_schema.load(self.request.json_body)
-        for key, value in data.items():
-            setattr(self.item, key, value)
-        self.request.render_schema = self.active_schema
-        return self.item
+        if not self.read_only:
+            data, errors = self.active_schema.load(self.request.json_body)
+            if errors:
+                return errors
+            for key, value in data.items():
+                setattr(self.item, key, value)
+            self.request.render_schema = self.active_schema
+            return self.item
+        else:
+            return TitleDBViews.forbidden(self)
 
     def delete_item(self):
         DBSession.delete(self.item)
@@ -167,6 +188,7 @@ class EntryView(BaseView):
     item_cls = Entry
     schema_cls = EntrySchema
     nested_cls = EntrySchemaNested
+    moderator_cls = EntrySchema
 
 @register_views(route='cia_v1', collection_route='cia_collection_v1')
 class CIAView(BaseView):
@@ -225,7 +247,7 @@ class TitleDBViews:
 
     @view_config(route_name='home')
     def home(self):
-        return {'api_version': self.active_version}
+        return dict(api_version=self.active_version)
 
     @view_config(route_name='cia_collection_v0', renderer='json')
     def legacy_list_v0(self):

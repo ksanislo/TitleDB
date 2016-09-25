@@ -271,7 +271,7 @@ class Submission(GenericBase):
     status = Column(Text(1024))
 
 class SubmissionSchema(GenericSchema):
-    url = fields.URL()
+    url = fields.URL(required=True)
     status = fields.String()
 
 class SubmissionSchemaEveryone(SubmissionSchema):
