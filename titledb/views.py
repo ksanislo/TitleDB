@@ -53,6 +53,7 @@ from .models import (
     CategorySchema,
     Submission,
     SubmissionSchema,
+    SubmissionSchemaEveryone,
     User,
     Group
 )
@@ -77,16 +78,13 @@ class register_views(object):
             cls = view_config(_depth=1, renderer='json', attr='read_item',
                 request_method='GET', route_name=self.route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='update_item',
-                #request_method='PUT', route_name=self.route, permission='edit')(cls)
                 request_method='PUT', route_name=self.route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='delete_item',
                 request_method='DELETE', route_name=self.route, permission='super')(cls)
-                #request_method='DELETE', route_name=self.route)(cls)
         if self.collection_route:
             cls = view_config(_depth=1, renderer='json', attr='list_items',
                 request_method='GET', route_name=self.collection_route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='create_item',
-                #request_method='POST', route_name=self.collection_route, permission='edit')(cls)
                 request_method='POST', route_name=self.collection_route)(cls)
         return cls
 
@@ -95,51 +93,66 @@ class BaseView(object):
     item_cls = None
     schema_cls = None
     nested_cls = None
+    moderator_cls = None
+    everyone_cls = None
+    active_schema = None
 
     def __init__(self, request):
         self.request = request
-        # Don't load a single item for the collection route
+
+        # Load an item if we're not a collection
         if request.matched_route.name == self.item_route:
             item_id = int(request.matchdict['id'])
             item = DBSession.query(self.item_cls).get(item_id)
             self.item = item
 
+        if self.request.method == 'GET':
+            if request.matched_route.name == self.item_route:
+                # Set the active schema for items
+                if not self.nested_cls or (self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'false'):
+                    self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
+                else:
+                    self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
+            else:
+                # Set the active schema for lists
+                if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
+                    self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'),many=True)
+                else:
+                    self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'),many=True)
+        else:
+            if 'group:super' in self.request.effective_principals:
+                self.active_schema = self.schema_cls()
+            elif self.moderator_cls and 'group:mod' in self.request.effective_principals:
+                self.active_schema = self.moderator_cls()
+            elif self.everyone_cls and self.request.method == 'POST':
+                self.active_schema = self.everyone_cls()
+            else:
+                all_fields = tuple(self.schema_cls._declared_fields.keys())
+                self.active_schema = self.schema_cls(dump_only=all_fields)
+
+
     def create_item(self):
-        data, errors = self.schema_cls().load(self.request.json_body)
+        data, errors = self.active_schema.load(self.request.json_body)
         item = self.item_cls(**data)
         DBSession.add(item)
         DBSession.flush()
-        self.request.render_schema = self.schema_cls()
+        self.request.render_schema = self.active_schema
         return item
 
     def list_items(self):
         data = DBSession.query(self.item_cls).filter(self.item_cls.active == True).all()
-        if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
-            self.request.render_schema = self.nested_cls(many=True)
-        else:
-            self.request.render_schema = self.schema_cls(many=True)
+        self.request.render_schema = self.active_schema
         return data
 
     def read_item(self):
-        #raise
-        if not self.nested_cls or (self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'false'):
-            self.request.render_schema = self.schema_cls()
-        else:
-            self.request.render_schema = self.nested_cls()
+        self.request.render_schema = self.active_schema
         return self.item
 
     def update_item(self):
-        if 'group:super' in self.request.effective_principals:
-            data, errors = self.schema_cls().load(self.request.json_body)
-        elif self.moderator_cls and 'group:moderator' in self.request.effective_principals:
-            data, errors = self.moderator_cls().load(self.request.json_body)
-        else
-            data, errors = self.schema_cls(dump_only=tuple(self.nested_cls._declared_fields.keys())).load(self.request.json_body)
-            
-
+        data, errors = self.active_schema.load(self.request.json_body)
         for key, value in data.items():
             setattr(self.item, key, value)
-        self.request.render_schema = self.schema_cls()
+        self.request.render_schema = self.active_schema
         return self.item
 
     def delete_item(self):
@@ -200,6 +213,7 @@ class CategoryView(BaseView):
 class SubmissionView(BaseView):
     item_cls = Submission
     schema_cls = SubmissionSchema
+    everyone_cls = SubmissionSchemaEveryone
 
 @view_defaults(renderer='json')
 class TitleDBViews:

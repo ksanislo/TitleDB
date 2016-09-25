@@ -5,7 +5,6 @@ class Root(object):
     __acl__ = [
                (Allow, Everyone, 'view'),
                (Allow, 'group:editors', 'edit'),
-               (Allow, 'group:super', 'edit'),
                (Allow, 'group:super', 'super'),
               ]
 

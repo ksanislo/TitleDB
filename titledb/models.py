@@ -92,15 +92,11 @@ class EntrySchema(GenericSchema):
     url = fields.URL()
 
 class EntrySchemaNested(EntrySchema):
+    category_id = fields.Integer(load_only=True)
     category = fields.Nested('CategorySchema', many=False, only='name')
-    cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','entry_id','entry','icon_s','icon_l'])
+    cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','entry_id','entry'])
     tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','entry_id','entry'])
     arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','entry_id','entry'])
-    class Meta:
-        ordered = True
-        load_only = ['category_id']
-        dump_only = ['id','category','cia','tdsx','arm9']
-        exclude = ['created_at','updated_at']
 
 class CIA(FileBase):
     __tablename__ = 'cia'
@@ -126,13 +122,10 @@ class CIASchema(FileSchema):
     icon_l = fields.String()
 
 class CIASchemaNested(CIASchema):
+    entry_id = fields.Integer(load_only=True)
+    assets_id = fields.Integer(load_only=True)
     entry = fields.Nested('EntrySchemaNested', many=False, exclude=['active','cia','tdsx','arm9'])
     assets = fields.Nested('AssetsSchemaNested', many=False, exclude=['active','cia','tdsx','arm9'])
-    class Meta:
-        ordered = True
-        load_only = ['entry_id','assets_id']
-        dump_only = ['id','entry','assets']
-        exclude = ['created_at','updated_at']
 
 class CIA_v0(Base):
     __table__ = CIA.__table__
@@ -179,18 +172,20 @@ class TDSX(FileBase):
 
 class TDSXSchema(FileSchema):
     entry_id = fields.Integer()
+    smdh_id = fields.Integer()
+    xml_id = fields.Integer()
+    assets_id = fields.Integer()
     name = fields.Integer()
 
 class TDSXSchemaNested(TDSXSchema):
-    smdh = fields.Nested('SMDHSchemaNested', many=False, exclude=['active','tdsx','icon_s','icon_l'])
+    entry_id = fields.Integer(load_only=True)
+    smdh_id = fields.Integer(load_only=True)
+    xml_id = fields.Integer(load_only=True)
+    assets_id = fields.Integer(load_only=True)
+    smdh = fields.Nested('SMDHSchemaNested', many=False, exclude=['active','tdsx'])
     xml = fields.Nested('XMLSchemaNested', many=False, exclude=['active','tdsx'])
     entry = fields.Nested('EntrySchemaNested', many=False, exclude=['active','cia','tdsx','arm9'])
     assets = fields.Nested('AssetsSchemaNested', many=False, exclude=['active','cia','tdsx','arm9'])
-    class Meta:
-        ordered = True
-        load_only = ['entry_id','smdh_id','xml_id','assets_id']
-        dump_only = ['id','entry','smdh','xml','assets']
-        exclude = ['created_at','updated_at']
 
 class SMDH(FileBase):
     __tablename__ = 'smdh'
@@ -211,11 +206,6 @@ class SMDHSchema(FileSchema):
 
 class SMDHSchemaNested(SMDHSchema):
     tdsx = fields.Nested('TDSXSchemaNested', many=False, exclude=['smdh'])
-    class Meta:
-        ordered = True
-        load_only = ['tdsx_id']
-        dump_only = ['id','tdsx']
-        exclude = ['created_at','updated_at']
 
 class XML(FileBase):
     __tablename__ = 'xml'
@@ -227,11 +217,6 @@ class XMLSchema(FileSchema):
 
 class XMLSchemaNested(XMLSchema):
     tdsx = fields.Nested('TDSXSchemaNested', many=False, exclude=['xml'])
-    class Meta:
-        ordered = True
-        load_only = ['tdsx_id']
-        dump_only = ['id','tdsx']
-        exclude = ['created_at','updated_at']
 
 class ARM9(FileBase):
     __tablename__ = 'arm9'
@@ -245,13 +230,10 @@ class ARM9Schema(FileSchema):
     assets_id = fields.Integer()
 
 class ARM9SchemaNested(ARM9Schema):
+    entry_id = fields.Integer(load_only=True)
+    assets_id = fields.Integer(load_only=True)
     entry = fields.Nested('EntrySchemaNested', many=False, exclude=['cia','tdsx','arm9'])
     assets = fields.Nested('AssetsSchemaNested', many=False, exclude=['cia','tdsx','arm9'])
-    class Meta:
-        ordered = True
-        load_only = ['entry_id','assets_id']
-        dump_only = ['id','entry','assets']
-        exclude = ['created_at','updated_at']
 
 class Assets(FileBase):
     __tablename__ = 'assets'
@@ -270,33 +252,33 @@ class AssetsSchemaNested(AssetsSchema):
     cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','assets_id','assets'])
     tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','assets_id','assets'])
     arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','assets_id','assets'])
-    class Meta:
-        ordered = True
-        dump_only = ['id','cia','tdsx','arm9']
-        exclude = ['created_at','updated_at']
 
 class Category(GenericBase):
     __tablename__ = 'category'
     name = Column(Text)
 
 class CategorySchema(RenderSchema):
-    id = fields.Integer()
+    id = fields.Integer(dump_only=True)
     name = fields.String()
     active = fields.Bool()
-    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    class Meta:
-        ordered = True
-        dump_only = ['id','created_at','updated_at']
-        exclude = ['created_at','updated_at']
+    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
+    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
 
 class Submission(GenericBase):
     __tablename__ = 'submission'
     active = Column(Boolean, default=True)
-    url = Column(Text)
+    url = Column(Text(1024))
+    status = Column(Text(1024))
 
 class SubmissionSchema(GenericSchema):
     url = fields.URL()
+    status = fields.String()
+
+class SubmissionSchemaEveryone(SubmissionSchema):
+    class Meta:
+        ordered = True
+        exclude = ['created_at','updated_at']
+        dump_only = ['active','status']
 
 class User(GenericBase):
     __tablename__ = 'users'
