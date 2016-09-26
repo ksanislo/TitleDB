@@ -29,6 +29,11 @@ def usage(argv):
           '(example: "%s development.ini")' % (cmd, cmd))
     sys.exit(1)
 
+def action_add(url):
+    None
+
+def action_none(url):
+    None
 
 def main(argv=sys.argv):
     #if len(argv) != 2:
@@ -39,6 +44,17 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
+
+    choice = argv[1]
+
+    switcher = {
+        'add': action_add,
+        'none': action_none,
+    }
+    action = switcher.get(choice, action_none)
+    action(argv[2])
+
+
 
 #    with transaction.manager:
 #        for cia in DBSession.query(CIA).all():
