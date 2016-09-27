@@ -13,7 +13,7 @@ from sqlalchemy import (
     ForeignKey
 )
 
-from sqlalchemy.ext.declarative import ( AbstractConcreteBase, declarative_base )
+from sqlalchemy.ext.declarative import ( AbstractConcreteBase, declarative_base, declared_attr )
 
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -53,19 +53,43 @@ class FileBase(GenericBase, AbstractConcreteBase):
     version = Column(Text(64))
     size = Column(Integer)
     mtime = Column(DateTime)
-    url = Column(Text(2048))
     path = Column(Text(512))
-    etag = Column(Text(128))
     sha256 = Column(Text(64))
+    @declared_attr
+    def url_id(cls):
+        return Column(Integer, ForeignKey('url.id'))
+    @declared_attr
+    def url(cls):
+        return relationship('URL')
 
 class FileSchema(GenericSchema):
     version = fields.String()
     size = fields.Integer()
     mtime = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    url = fields.URL()
     path = fields.String()
-    etag = fields.String()
     sha256 = fields.String()
+    url_id = fields.Integer()
+
+class FileSchemaNested(FileSchema):
+    url_id = fields.Integer(load_only=True)
+    url = fields.Nested('URLSchemaNested', many=False, only='url')
+
+class URL(GenericBase):
+    __tablename__ = 'url'
+    url = Column(Text)
+    size = Column(Integer)    
+    mtime = Column(DateTime)  
+    sha256 = Column(Text(64)) 
+
+class URLSchema(RenderSchema):
+    id = fields.Integer(dump_only=True)
+    active = fields.Bool()
+    url = fields.URL()
+    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
+    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
+
+class URLSchemaNested(URLSchema):
+    None
 
 class Entry(GenericBase):
     __tablename__ = 'entry'
@@ -121,7 +145,7 @@ class CIASchema(FileSchema):
     icon_s = fields.String()
     icon_l = fields.String()
 
-class CIASchemaNested(CIASchema):
+class CIASchemaNested(FileSchemaNested, CIASchema):
     entry_id = fields.Integer(load_only=True)
     assets_id = fields.Integer(load_only=True)
     entry = fields.Nested('EntrySchemaNested', many=False, exclude=['active','cia','tdsx','arm9'])
@@ -130,7 +154,7 @@ class CIASchemaNested(CIASchema):
 class CIA_v0(Base):
     __table__ = CIA.__table__
     __mapper_args__ = {
-        'include_properties' :['id', 'active', 'titleid', 'name', 'description', 'author', 'size', 'mtime', 'url', 'create_time', 'update_time']
+        'include_properties' :['id', 'active', 'titleid', 'name', 'description', 'author', 'size', 'mtime', 'create_time', 'update_time', 'url_id']
     }
     id = CIA.__table__.c.id
     active = CIA.__table__.c.active
@@ -140,7 +164,7 @@ class CIA_v0(Base):
     author = CIA.__table__.c.publisher
     size = CIA.__table__.c.size
     mtime = CIA.__table__.c.mtime
-    url = CIA.__table__.c.url
+    url = relationship('URL', primaryjoin=URL.id==__table__.c.url_id)
     create_time = CIA.__table__.c.created_at
     update_time = CIA.__table__.c.updated_at
 
@@ -152,7 +176,7 @@ class CIASchema_v0(RenderSchema):
     author = fields.String(dump_only=True)
     size = fields.Integer(dump_only=True)
     mtime = fields.Function(lambda obj: int(obj.mtime.strftime('%s')), dump_only=True)
-    url = fields.URL(dump_only=True)
+    url = fields.Nested('URLSchemaNested', many=False, only='url')
     create_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
     update_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
     class Meta:
@@ -177,7 +201,7 @@ class TDSXSchema(FileSchema):
     assets_id = fields.Integer()
     name = fields.Integer()
 
-class TDSXSchemaNested(TDSXSchema):
+class TDSXSchemaNested(FileSchemaNested, TDSXSchema):
     entry_id = fields.Integer(load_only=True)
     smdh_id = fields.Integer(load_only=True)
     xml_id = fields.Integer(load_only=True)
@@ -204,7 +228,7 @@ class SMDHSchema(FileSchema):
     icon_s = fields.String()
     icon_l = fields.String()
 
-class SMDHSchemaNested(SMDHSchema):
+class SMDHSchemaNested(FileSchemaNested, SMDHSchema):
     tdsx = fields.Nested('TDSXSchemaNested', many=False, exclude=['smdh'])
 
 class XML(FileBase):
@@ -215,7 +239,7 @@ class XML(FileBase):
 class XMLSchema(FileSchema):
     None
 
-class XMLSchemaNested(XMLSchema):
+class XMLSchemaNested(FileSchemaNested, XMLSchema):
     tdsx = fields.Nested('TDSXSchemaNested', many=False, exclude=['xml'])
 
 class ARM9(FileBase):
@@ -229,7 +253,7 @@ class ARM9Schema(FileSchema):
     entry_id = fields.Integer()
     assets_id = fields.Integer()
 
-class ARM9SchemaNested(ARM9Schema):
+class ARM9SchemaNested(FileSchemaNested, ARM9Schema):
     entry_id = fields.Integer(load_only=True)
     assets_id = fields.Integer(load_only=True)
     entry = fields.Nested('EntrySchemaNested', many=False, exclude=['cia','tdsx','arm9'])
@@ -248,7 +272,7 @@ class Assets(FileBase):
 class AssetsSchema(FileSchema):
     mapping = fields.String()
 
-class AssetsSchemaNested(AssetsSchema):
+class AssetsSchemaNested(FileSchemaNested, AssetsSchema):
     cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','assets_id','assets'])
     tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','assets_id','assets'])
     arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','assets_id','assets'])
@@ -257,7 +281,7 @@ class AssetsSchemaModerator(AssetsSchema):
     class Meta:
         ordered = True
         exclude = ['created_at','updated_at']
-        dump_only = ['version','size','mtime','url','path','etag','sha256']
+        dump_only = ['version','size','mtime','path','sha256']
 
 class Category(GenericBase):
     __tablename__ = 'category'

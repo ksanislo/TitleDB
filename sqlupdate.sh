@@ -13,5 +13,5 @@ sqlite3 ./db/legacydb.sqlite .dump |\
 
 update_titledb_db development.ini 
 
-rm ./db/legacydb.sqlite
+#rm ./db/legacydb.sqlite
 
