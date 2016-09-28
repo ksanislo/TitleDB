@@ -77,14 +77,16 @@ class FileSchemaNested(FileSchema):
 class URL(GenericBase):
     __tablename__ = 'url'
     url = Column(Text)
+    version = Column(Text(64))
+    etag = Column(DateTime)  
     size = Column(Integer)    
-    mtime = Column(DateTime)  
     sha256 = Column(Text(64)) 
 
 class URLSchema(RenderSchema):
     id = fields.Integer(dump_only=True)
-    active = fields.Bool()
     url = fields.URL()
+    version = fields.String()
+    etag = fields.String()
     created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
     updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
 
@@ -188,7 +190,6 @@ class TDSX(FileBase):
     smdh_id = Column(Integer, ForeignKey('smdh.id'))
     xml_id = Column(Integer, ForeignKey('xml.id'))
     assets_id = Column(Integer, ForeignKey('assets.id'))
-    name = Column(Unicode(256))
     smdh = relationship('SMDH')
     xml = relationship('XML')
     entry = relationship('Entry')
@@ -199,7 +200,6 @@ class TDSXSchema(FileSchema):
     smdh_id = fields.Integer()
     xml_id = fields.Integer()
     assets_id = fields.Integer()
-    name = fields.Integer()
 
 class TDSXSchemaNested(FileSchemaNested, TDSXSchema):
     entry_id = fields.Integer(load_only=True)
