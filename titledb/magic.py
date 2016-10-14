@@ -12,6 +12,16 @@ from .models import (
     URLSchema,
 )
 
+def checksum_sha256(filename):
+    h = hashlib.sha256()
+    try:
+        with open(filename, 'rb') as f: 
+            for chunk in iter(lambda: f.read(65536), b''): 
+                h.update(chunk)
+        return h.hexdigest()
+    except FileNotFoundError:
+        return None
+
 def download_file(path, url):
     url = url.split('#')[0]    # Remove any # target from the URL
     with transaction.manager:
@@ -26,10 +36,13 @@ def download_file(path, url):
         headers = dict()
         headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
 
-        if item.etag:
-            headers['If-None-Match'] = item.etag
-        elif item.mtime:
-            headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
+        if item.id and item.filename and item.sha256 and \
+            item.sha256 == checksum_sha256(os.path.join(path,str(item.id),item.filename)):
+
+            if item.etag:
+                headers['If-None-Match'] = item.etag
+            elif item.mtime:
+                headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
 
         print('URL: '+url)
         print('Request headers:')
@@ -41,7 +54,9 @@ def download_file(path, url):
         print(json.dumps(dict(r.headers), sort_keys=True, indent=4, separators=(',', ': ')))
 
 	# GitHub release "archive" fail to properly report as 304, but we can fake it.
-        if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag']:
+        if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag'] and \
+            ('If-None-Match' in headers or 'If-Modified-Since' in headers):
+
             r.status_code = 304
 
         print('HTTP Status: ' + str(r.status_code))
@@ -72,12 +87,12 @@ def download_file(path, url):
             if not os.path.isdir(path):
                 os.mkdir(path)
 
-            if not os.path.isdir(path + '/' + str(item.id)):
-                os.mkdir(path + '/' + str(item.id))
+            if not os.path.isdir(os.path.join(path,str(item.id))):
+                os.mkdir(os.path.join(path,str(item.id)))
 
             h = hashlib.sha256()
             item.size = 0
-            with open(path + '/' + str(item.id) + '/' + item.filename, 'wb') as f:
+            with open(os.path.join(path,str(item.id),item.filename), 'wb') as f:
                 for chunk in r.iter_content(chunk_size=65536):
                     if chunk: # filter out keep-alive new chunks
                         item.size += len(chunk)

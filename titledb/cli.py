@@ -31,10 +31,10 @@ def usage(argv):
           '(example: "%s development.ini")' % (cmd, cmd))
     sys.exit(1)
 
-def action_add(url):
-    download_file("/var/cache/titledb/url", url)
+def action_add(settings,url):
+    download_file(os.path.join(settings['titledb.cache'], 'url'), url)
 
-def action_none(url):
+def action_none(settings,url):
     None
 
 def main(argv=sys.argv):
@@ -54,7 +54,7 @@ def main(argv=sys.argv):
         'none': action_none,
     }
     action = switcher.get(choice, action_none)
-    action(argv[2])
+    action(settings,argv[2])
 
 
 
