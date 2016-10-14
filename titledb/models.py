@@ -77,16 +77,22 @@ class FileSchemaNested(FileSchema):
 class URL(GenericBase):
     __tablename__ = 'url'
     url = Column(Text)
+    filename = Column(Text(256))
     version = Column(Text(64))
-    etag = Column(DateTime)  
+    etag = Column(Text(512))
+    mtime = Column(DateTime)
+    content_type = Column(Text(64))
     size = Column(Integer)    
     sha256 = Column(Text(64)) 
 
 class URLSchema(RenderSchema):
     id = fields.Integer(dump_only=True)
     url = fields.URL()
+    filename = fields.String()
     version = fields.String()
     etag = fields.String()
+    mtime = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
+    content_type = fields.String()
     created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
     updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
 

@@ -12,6 +12,8 @@ from pyramid.paster import (
     setup_logging,
 )
 
+from .magic import download_file
+
 from .models import (
     DBSession,
     CIA,
@@ -30,7 +32,7 @@ def usage(argv):
     sys.exit(1)
 
 def action_add(url):
-    None
+    download_file("cache/", url)
 
 def action_none(url):
     None
