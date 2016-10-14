@@ -32,7 +32,7 @@ def usage(argv):
     sys.exit(1)
 
 def action_add(url):
-    download_file("cache/", url)
+    download_file("/var/cache/titledb/url", url)
 
 def action_none(url):
     None
