@@ -29,6 +29,9 @@ from .models import (
     Entry,
     EntrySchema,
     EntrySchemaNested,
+    URL,
+    URLSchema,
+    URLSchemaNested,
     CIA,
     CIASchema,
     CIASchemaNested,
@@ -190,6 +193,12 @@ class EntryView(BaseView):
     schema_cls = EntrySchema
     nested_cls = EntrySchemaNested
     moderator_cls = EntrySchema
+
+@register_views(route='url_v1', collection_route='url_collection_v1')
+class URLView(BaseView):
+    item_cls = URL
+    schema_cls = URLSchema
+    nested_cls = URLSchemaNested
 
 @register_views(route='cia_v1', collection_route='cia_collection_v1')
 class CIAView(BaseView):

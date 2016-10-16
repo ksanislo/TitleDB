@@ -1,3 +1,5 @@
+#import titledb.debug
+
 import os
 import sys
 import re
@@ -12,7 +14,7 @@ from pyramid.paster import (
     setup_logging,
 )
 
-from .magic import download_file
+from .magic import download_file, find_version_in_string
 
 from .models import (
     DBSession,
@@ -35,7 +37,7 @@ def action_add(settings,url):
     download_file(os.path.join(settings['titledb.cache'], 'url'), url)
 
 def action_none(settings,url):
-    None
+    print(find_version_in_string(url))
 
 def main(argv=sys.argv):
     #if len(argv) != 2:

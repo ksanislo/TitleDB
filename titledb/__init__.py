@@ -40,6 +40,8 @@ def main(global_config, **settings):
 
     config.add_route('entry_v1', '/v1/{x:(entry/)?}{id:\d+}')
     config.add_route('entry_collection_v1', '/v1/{x:(entry)?}')
+    config.add_route('url_v1', '/v1/url/{id:\d+}')
+    config.add_route('url_collection_v1', '/v1/url')
     config.add_route('cia_v1', '/v1/cia/{id:\d+}')
     config.add_route('cia_collection_v1', '/v1/cia')
     config.add_route('3dsx_v1', '/v1/tdsx/{id:\d+}')

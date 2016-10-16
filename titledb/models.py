@@ -93,6 +93,8 @@ class URLSchema(RenderSchema):
     etag = fields.String()
     mtime = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
     content_type = fields.String()
+    size = fields.Integer()
+    sha256 = fields.String()
     created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
     updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
 

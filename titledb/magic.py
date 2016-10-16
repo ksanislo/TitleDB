@@ -2,8 +2,8 @@ import requests
 import hashlib
 import transaction
 import json
-import re
 import os
+import re
 from datetime import datetime
 
 from .models import (
@@ -22,6 +22,19 @@ def checksum_sha256(filename):
     except FileNotFoundError:
         return None
 
+def find_version_in_string(string):
+    # GitHub URLs are easy, we'll just pick up the tag.
+    m = re.fullmatch('https?://github.com/[^/]+/[^/]+/releases/download/([^/]+)/[^/]+', string)
+    if m:
+        return m.group(1)
+
+    # Find things that look like version strings and return the last match
+    m = re.findall('(v?\d[\d_\-\.]*[ab]?)[/_\-\.]', string)
+    if m:
+        return m[-1]
+
+    return None
+
 def download_file(path, url):
     url = url.split('#')[0]    # Remove any # target from the URL
     with transaction.manager:
@@ -36,39 +49,32 @@ def download_file(path, url):
         headers = dict()
         headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
 
-        if item.id and item.filename and item.sha256 and \
-            item.sha256 == checksum_sha256(os.path.join(path,str(item.id),item.filename)):
-
+        if item.id and item.filename and item.sha256 \
+            and item.sha256 == checksum_sha256(os.path.join(path,str(item.id),item.filename)):
             if item.etag:
-                headers['If-None-Match'] = item.etag
+                headers['If-None-Match'] = '"' + item.etag + '"'
             elif item.mtime:
                 headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
 
-        print('URL: '+url)
-        print('Request headers:')
-        print(json.dumps(dict(headers), sort_keys=True, indent=4, separators=(',', ': ')))
+        print(headers)
 
         r = requests.get(url, stream=True, headers=headers)
 
-        print('Response headers:')
-        print(json.dumps(dict(r.headers), sort_keys=True, indent=4, separators=(',', ': ')))
+        print(r.headers)
 
 	# GitHub release "archive" fail to properly report as 304, but we can fake it.
-        if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag'] and \
-            ('If-None-Match' in headers or 'If-Modified-Since' in headers):
-
+        if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag'] \
+            and ('If-None-Match' in headers or 'If-Modified-Since' in headers):
             r.status_code = 304
-
-        print('HTTP Status: ' + str(r.status_code))
 
         if r.status_code == 200:
             item.active = 1
 
             if 'etag' in r.headers:
-                item.etag = r.headers['etag']
+                item.etag = r.headers['etag'].strip('"')
 
             if 'last-modified' in r.headers:
-                item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %X %Z')
+                item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %H:%M:%S %Z')
 
             if 'content-type' in r.headers:
                 item.content_type = r.headers['content-type']
@@ -78,11 +84,11 @@ def download_file(path, url):
             else:
                 item.filename = url.split('/')[-1].split('?')[0]
 
-            if new:
+            item.version = find_version_in_string(url)
+
+            if new: # add/flush to get our item.id
                 DBSession.add(item)
                 DBSession.flush()
-
-            print('URL ID: ' + str(item.id))
 
             if not os.path.isdir(path):
                 os.mkdir(path)
