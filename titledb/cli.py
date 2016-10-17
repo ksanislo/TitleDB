@@ -14,7 +14,7 @@ from pyramid.paster import (
     setup_logging,
 )
 
-from .magic import download_file, find_version_in_string
+from .magic import download_url, find_version_in_string
 
 from .models import (
     DBSession,
@@ -33,10 +33,11 @@ def usage(argv):
           '(example: "%s development.ini")' % (cmd, cmd))
     sys.exit(1)
 
-def action_add(settings,url):
-    download_file(os.path.join(settings['titledb.cache'], 'url'), url)
+def action_add(settings, url):
+    url_info = download_url(url,cache_path=os.path.join(settings['titledb.cache'], 'url'))
+    
 
-def action_none(settings,url):
+def action_none(settings, url):
     print(find_version_in_string(url))
 
 def main(argv=sys.argv):

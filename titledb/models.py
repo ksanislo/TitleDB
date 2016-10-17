@@ -76,7 +76,7 @@ class FileSchemaNested(FileSchema):
 
 class URL(GenericBase):
     __tablename__ = 'url'
-    url = Column(Text)
+    url = Column(Text(1024), index=True, unique=True)
     filename = Column(Text(256))
     version = Column(Text(64))
     etag = Column(Text(512))
@@ -84,9 +84,20 @@ class URL(GenericBase):
     content_type = Column(Text(64))
     size = Column(Integer)    
     sha256 = Column(Text(64)) 
+    cia = relationship('CIA',
+        primaryjoin='and_(CIA.url_id == URL.id, CIA.active == True)')
+    tdsx = relationship('TDSX',
+        primaryjoin='and_(TDSX.url_id == URL.id, TDSX.active == True)')
+    smdh = relationship('SMDH',
+        primaryjoin='and_(SMDH.url_id == URL.id, SMDH.active == True)')
+    xml = relationship('XML',
+        primaryjoin='and_(XML.url_id == URL.id, XML.active == True)')
+    arm9 = relationship('ARM9',
+        primaryjoin='and_(ARM9.url_id == URL.id, ARM9.active == True)')
+    assets = relationship('Assets',
+        primaryjoin='and_(Assets.url_id == URL.id, Assets.active == True)')
 
-class URLSchema(RenderSchema):
-    id = fields.Integer(dump_only=True)
+class URLSchema(GenericSchema):
     url = fields.URL()
     filename = fields.String()
     version = fields.String()
@@ -95,11 +106,14 @@ class URLSchema(RenderSchema):
     content_type = fields.String()
     size = fields.Integer()
     sha256 = fields.String()
-    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
-    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
 
 class URLSchemaNested(URLSchema):
-    None
+    cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','url_id','url'])
+    tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','url_id','url'])
+    smdh = fields.Nested('SMDHSchemaNested', many=True, exclude=['active','url_id','url'])
+    xml = fields.Nested('XMLSchemaNested', many=True, exclude=['active','url_id','url'])
+    arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','url_id','url'])
+    assets = fields.Nested('AssetsSchemaNested', many=True, exclude=['active','url_id','url'])
 
 class Entry(GenericBase):
     __tablename__ = 'entry'
