@@ -4,6 +4,8 @@ import transaction
 import json
 import os
 import re
+import mimetypes
+
 from datetime import datetime
 
 from .models import (
@@ -35,7 +37,23 @@ def find_version_in_string(string):
 
     return None
 
-def download_url(url=None, url_id=None, cache_path=''):
+def determine_mimetype(filename, content_type=None):
+    mimetypes.add_type('application/x-3ds-archive','.cia')
+    mimetypes.add_type('application/x-3ds-homebrew','.3dsx')
+    mimetypes.add_type('application/x-3ds-iconfile','.smdh')
+    mimetypes.add_type('application/x-3ds-arm9bin','.bin')
+    (mimetype, encoding) = mimetypes.guess_type(filename)    
+    if mimetype:
+        return(mimetype)
+    elif content_type:
+        return(content_type)
+
+def url_to_cache_path(string, cache_root):
+    url_hash = hashlib.sha256(string.encode('utf-8')).hexdigest()
+    cache_path = os.path.join(cache_root,url_hash[0:3],url_hash[3:6],url_hash[6:])
+    return(cache_path)
+
+def process_url(url=None, url_id=None, cache_root=''):
     with transaction.manager:
         new = False
         if url:
@@ -54,12 +72,13 @@ def download_url(url=None, url_id=None, cache_path=''):
         headers = dict()
         headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
 
-        if item.id and item.filename and item.sha256 \
-            and item.sha256 == checksum_sha256(os.path.join(cache_path,str(item.id),item.filename)):
-            if item.etag:
-                headers['If-None-Match'] = '"' + item.etag + '"'
-            elif item.mtime:
-                headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
+        if not new and item.url and item.filename:
+            cache_path = url_to_cache_path(item.url, cache_root)
+            if item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path,item.filename)):
+                if item.etag:
+                    headers['If-None-Match'] = '"' + item.etag + '"'
+                elif item.mtime:
+                    headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
 
         try:
             r = requests.get(item.url, stream=True, headers=headers)
@@ -72,7 +91,7 @@ def download_url(url=None, url_id=None, cache_path=''):
             r.status_code = 304
 
         if r.status_code == 200:
-            item.active = 1
+            item.active = True
             item.version = find_version_in_string(item.url)
             if 'etag' in r.headers:
                 item.etag = r.headers['etag'].strip('"')
@@ -85,42 +104,41 @@ def download_url(url=None, url_id=None, cache_path=''):
             else:
                 item.filename = item.url.split('/')[-1].split('?')[0]
 
-            expected_size = 0
-            if 'content-length' in r.headers:
-                expected_size = int(r.headers['content-length'])
+            if not os.path.isdir(file_path):
+                os.makedirs(file_path)
 
-            if new: # add/flush to get our item.id
-                DBSession.add(item)
-                DBSession.flush()
+            if not cache_path:
+                cache_path = url_to_cache_path(item.url, cache_root)
 
-            if not os.path.isdir(cache_path):
-                os.mkdir(cache_path)
+            with open(os.path.join(cache_path,item.filename), 'wb') as f:
+                h = hashlib.sha256()
+                calculated_size = 0
 
-            if not os.path.isdir(os.path.join(cache_path,str(item.id))):
-                os.mkdir(os.path.join(cache_path,str(item.id)))
-
-            h = hashlib.sha256()
-            item.size = 0
-            with open(os.path.join(cache_path,str(item.id),item.filename), 'wb') as f:
                 try:
                     for chunk in r.iter_content(chunk_size=65536):
                         if chunk: # filter out keep-alive new chunks
-                            item.size += len(chunk)
+                            calculated_size += len(chunk)
                             h.update(chunk)
                             f.write(chunk)
-                except requests.exceptions.RequestException:
+                    del chunk
+                except:
                     DBSession.rollback()
                     return None
 
-            chunk = None
-            item.sha256 = h.hexdigest()
+                item.sha256 = h.hexdigest()
+                item.size = calculated_size
 
-            if expected_size and item.size != expected_size:
-                DBSession.rollback()
-                return None
+            item.content_type = determine_mimetype(os.path.join(file_path,item.filename), item.content_type)
+
 
         if r.status_code >= 400 and r.status_code <= 499:
-            item.active = 0
+            item.active = False
+
+        if new:
+            if item.active:
+                DBSession.add(item)
+            else:
+                DBSession.rollback()
 
         DBSession.flush()
         return URLSchema().dump(item).data

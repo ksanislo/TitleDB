@@ -14,7 +14,7 @@ from pyramid.paster import (
     setup_logging,
 )
 
-from .magic import download_url, find_version_in_string
+from .magic import process_url, find_version_in_string
 
 from .models import (
     DBSession,
@@ -34,7 +34,7 @@ def usage(argv):
     sys.exit(1)
 
 def action_add(settings, url):
-    url_info = download_url(url,cache_path=os.path.join(settings['titledb.cache'], 'url'))
+    url_info = process_url(url,cache_root=settings['titledb.cache'])
     
 
 def action_none(settings, url):
