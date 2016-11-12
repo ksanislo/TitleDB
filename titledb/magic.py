@@ -51,7 +51,25 @@ def determine_mimetype(filename, content_type=None):
 def url_to_cache_path(string, cache_root):
     url_hash = hashlib.sha256(string.encode('utf-8')).hexdigest()
     cache_path = os.path.join(cache_root,url_hash[0:3],url_hash[3:6],url_hash[6:])
+    print(cache_path)
     return(cache_path)
+
+def download_to_filename(r, filename):
+    with open(filename, 'wb') as f:
+        h = hashlib.sha256()
+        calculated_size = 0
+
+        try:
+            for chunk in r.iter_content(chunk_size=65536):
+                if chunk: # filter out keep-alive new chunks
+                    calculated_size += len(chunk)
+                    h.update(chunk)
+                    f.write(chunk)
+            del chunk
+        except:
+            return(None, None)
+
+        return(calculated_size, h.hexdigest())
 
 def process_url(url=None, url_id=None, cache_root=''):
     with transaction.manager:
@@ -74,6 +92,7 @@ def process_url(url=None, url_id=None, cache_root=''):
 
         if not new and item.url and item.filename:
             cache_path = url_to_cache_path(item.url, cache_root)
+
             if item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path,item.filename)):
                 if item.etag:
                     headers['If-None-Match'] = '"' + item.etag + '"'
@@ -93,43 +112,34 @@ def process_url(url=None, url_id=None, cache_root=''):
         if r.status_code == 200:
             item.active = True
             item.version = find_version_in_string(item.url)
+
             if 'etag' in r.headers:
                 item.etag = r.headers['etag'].strip('"')
+
             if 'last-modified' in r.headers:
                 item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %H:%M:%S %Z')
-            if 'content-type' in r.headers:
-                item.content_type = r.headers['content-type']
+
             if 'content-disposition' in r.headers:
                 item.filename = r.headers['content-disposition'].partition('filename=')[2].strip('"').split('/')[-1]
             else:
                 item.filename = item.url.split('/')[-1].split('?')[0]
 
-            if not os.path.isdir(file_path):
-                os.makedirs(file_path)
+            if 'content-type' in r.headers:
+                item.content_type = determine_mimetype(os.path.join(cache_path,item.filename),r.headers['content-type'])
+            else:
+                item.content_type = determine_mimetype(os.path.join(cache_path,item.filename))
 
-            if not cache_path:
-                cache_path = url_to_cache_path(item.url, cache_root)
+            cache_path = url_to_cache_path(item.url, cache_root)
+            if not os.path.isdir(cache_path):
+                os.makedirs(cache_path)
 
-            with open(os.path.join(cache_path,item.filename), 'wb') as f:
-                h = hashlib.sha256()
-                calculated_size = 0
+            (item.size, item.sha256) = download_to_filename(r, os.path.join(cache_path,item.filename))
 
-                try:
-                    for chunk in r.iter_content(chunk_size=65536):
-                        if chunk: # filter out keep-alive new chunks
-                            calculated_size += len(chunk)
-                            h.update(chunk)
-                            f.write(chunk)
-                    del chunk
-                except:
-                    DBSession.rollback()
-                    return None
+            if not item.size or not item.sha256:
+                None # TODO: Errors happened during download.
 
-                item.sha256 = h.hexdigest()
-                item.size = calculated_size
-
-            item.content_type = determine_mimetype(os.path.join(file_path,item.filename), item.content_type)
-
+        if r.status_code == 304:
+            item.active = True
 
         if r.status_code >= 400 and r.status_code <= 499:
             item.active = False
