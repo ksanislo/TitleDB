@@ -14,6 +14,11 @@ from .models import (
     URLSchema,
 )
 
+mimetypes.add_type('application/x-3ds-archive','.cia')
+mimetypes.add_type('application/x-3ds-homebrew','.3dsx')
+mimetypes.add_type('application/x-3ds-iconfile','.smdh')
+mimetypes.add_type('application/x-3ds-arm9bin','.bin')
+
 def checksum_sha256(filename):
     h = hashlib.sha256()
     try:
@@ -38,10 +43,6 @@ def find_version_in_string(string):
     return None
 
 def determine_mimetype(filename, content_type=None):
-    mimetypes.add_type('application/x-3ds-archive','.cia')
-    mimetypes.add_type('application/x-3ds-homebrew','.3dsx')
-    mimetypes.add_type('application/x-3ds-iconfile','.smdh')
-    mimetypes.add_type('application/x-3ds-arm9bin','.bin')
     (mimetype, encoding) = mimetypes.guess_type(filename)    
     if mimetype:
         return(mimetype)
@@ -113,6 +114,10 @@ def process_url(url=None, url_id=None, cache_root=''):
             item.active = True
             item.version = find_version_in_string(item.url)
 
+            cache_path = url_to_cache_path(item.url, cache_root)
+            if not os.path.isdir(cache_path):
+                os.makedirs(cache_path)
+
             if 'etag' in r.headers:
                 item.etag = r.headers['etag'].strip('"')
 
@@ -129,19 +134,15 @@ def process_url(url=None, url_id=None, cache_root=''):
             else:
                 item.content_type = determine_mimetype(os.path.join(cache_path,item.filename))
 
-            cache_path = url_to_cache_path(item.url, cache_root)
-            if not os.path.isdir(cache_path):
-                os.makedirs(cache_path)
-
             (item.size, item.sha256) = download_to_filename(r, os.path.join(cache_path,item.filename))
 
             if not item.size or not item.sha256:
                 None # TODO: Errors happened during download.
 
-        if r.status_code == 304:
+        elif r.status_code == 304:
             item.active = True
 
-        if r.status_code >= 400 and r.status_code <= 499:
+        else:
             item.active = False
 
         if new:
