@@ -10,6 +10,7 @@ import re
 import mimetypes
 import numpy
 import base64
+import collections
 
 from datetime import datetime
 
@@ -84,12 +85,10 @@ def download_to_filename(r, filename):
 
 def process_url(url_string=None, url_id=None, cache_root=''):
     with transaction.manager:
-        new = False
         if url_string:
             url_string = url_string.split('#')[0]    # Remove any # target from the URL
             item = DBSession.query(URL).filter_by(url=url_string).first()
             if not item:
-                new = True
                 item = URL(url=url_string)
         elif url_id:
             item = DBSession.query(URL).get(url_id)
@@ -101,7 +100,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         headers = dict()
         headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
 
-        if not new and item.url and item.filename:
+        if item.url and item.filename:
             cache_path = url_to_cache_path(item.url, cache_root)
 
             if item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path,item.filename)):
@@ -120,8 +119,8 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             and ('If-None-Match' in headers or 'If-Modified-Since' in headers):
             r.status_code = 304
 
+        subitems = []
         if r.status_code == 200:
-            item.active = True
             item.version = find_version_in_string(item.url)
 
             cache_path = url_to_cache_path(item.url, cache_root)
@@ -159,7 +158,13 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             }
             action = switcher.get(item.content_type, None)
             if action:
-                item.active = action(item, cache_path=cache_path)
+                results = action(item, cache_path=cache_path)
+                if results:
+                    item.active = True
+                    if isinstance(results, collections.Iterable):
+                        subitems.extend(results)
+                    else:
+                        subitems.append(results)
             else:
                 item.active = False
 
@@ -170,11 +175,21 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         else:
             item.active = False
 
-        if new:
+        # Realize self
+        if not item.id:
             if item.active:
                 DBSession.add(item)
+                DBSession.flush()
             else:
                 DBSession.rollback()
+                return(None)
+
+        # Realize all subitems
+        for subitem in subitems:
+            subitem.url_id = item.id
+            if not subitem.id:
+                DBSession.add(subitem)
+                DBSession.flush()
 
         DBSession.flush()
         return URLSchema().dump(item).data
@@ -185,38 +200,29 @@ def add_cia(url, cache_path, archive_path=None):
     else:
         filename=os.path.join(cache_path,url.filename)
 
-    new = False
-    cia = DBSession.query(CIA).filter_by(url_id=url.id,path=archive_path).first()
-    if not cia:
-        new = True
-        cia = CIA(active=False)
+    item = DBSession.query(CIA).filter_by(url_id=url.id,path=archive_path).first()
+    if not item:
+        item = CIA(active=False)
 
-    cia.path = archive_path
-    cia.version = url.version
-    cia.size = os.path.getsize(filename)
-    cia.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
-    cia.sha256 = checksum_sha256(filename)
+    item.path = archive_path
+    item.version = url.version
+    item.size = os.path.getsize(filename)
+    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+    item.sha256 = checksum_sha256(filename)
 
     with open(filename, 'rb') as f:
         f.seek(11292)
         try:
-            cia.titleid = "%0.16X" % numpy.fromfile(f, dtype='>u8', count=1)[0]
+            item.titleid = "%0.16X" % numpy.fromfile(f, dtype='>u8', count=1)[0]
         except IndexError:
             return None
 
-        if cia.titleid[:8] == "00040000": # and data['titleid'][0:8] != "00048004":
-            cia.active = True
+        if item.titleid[:8] == "00040000": # and data['titleid'][0:8] != "00048004":
+            item.active = True
 
         f.seek(-14016, 2)
-        (cia.name_s,cia.name_l,cia.publisher,cia.icon_s,cia.icon_l) = decode_smdh(f.read(14016))
-
-    if cia.active:
-        DBSession.add(url)
-        DBSession.flush()
-        cia.url_id = url.id
-        DBSession.add(cia)
-        DBSession.flush()
-        return(True)
+        (item.name_s,item.name_l,item.publisher,item.icon_s,item.icon_l) = decode_smdh(f.read(14016))
+    return(item)
 
 def add_tdsx(url_entry, cache_path, archive_path=None):
     None
@@ -231,17 +237,20 @@ def add_xml(url_entry, cache_path, archive_path=None):
     None
 
 def decode_smdh(smdh):
-        # freeShop doesn't have SMDH magic. WTF?
-        #if req.content[0:4] != 'SMDH':
-        #               return None
+    # Decoding this raw is pretty awful, it should read headers...
 
-        # The english description starts at SMDH offset 520, encoded UTF-16
-        name_s = smdh[520:520+128].decode('utf-16').rstrip('\0')
-        name_l = smdh[520+128:520+384].decode('utf-16').rstrip('\0')
-        publisher = smdh[520+384:520+512].decode('utf-16').rstrip('\0')
+    # freeShop doesn't have SMDH magic. WTF?
+    #if req.content[0:4] != 'SMDH':
+    #               return None
 
-        # These are the SMDH icons, both small and large.
-        icon_s = base64.b64encode(smdh[8256:8256+1152])
-        icon_l = base64.b64encode(smdh[9408:9408+4608])
+    # The english description starts at SMDH offset 520, encoded UTF-16
+    name_s = smdh[520:520+128].decode('utf-16').rstrip('\0')
+    name_l = smdh[520+128:520+384].decode('utf-16').rstrip('\0')
+    publisher = smdh[520+384:520+512].decode('utf-16').rstrip('\0')
 
-        return (name_s,name_l,publisher,icon_s,icon_l)
+    # These are the SMDH icons, both small and large.
+    icon_s = base64.b64encode(smdh[8256:8256+1152])
+    icon_l = base64.b64encode(smdh[9408:9408+4608])
+
+    return (name_s,name_l,publisher,icon_s,icon_l)
+
