@@ -196,7 +196,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         return URLSchema().dump(item).data
 
 def add_cia(url, cache_path, archive_path=None):
-    (cia, filename) = add_cia(url, CIA, cache_path, archive_path)
+    (cia, filename) = add_item(CIA, url, cache_path, archive_path)
     with open(filename, 'rb') as f:
         f.seek(11292)
         try:
@@ -212,28 +212,28 @@ def add_cia(url, cache_path, archive_path=None):
     return(cia)
 
 def add_tdsx(url, cache_path, archive_path=None):
-    (tdsx, filename) = add_item(url, TDSX, cache_path, archive_path)
+    (tdsx, filename) = add_item(TDSX, url, cache_path, archive_path)
     tdsx.active = True
     return(tdsx)
 
 def add_smdh(url, cache_path, archive_path=None):
-    (smdh, filename) = add_item(url, SMDH, cache_path, archive_path)
+    (smdh, filename) = add_item(SMDH, url, cache_path, archive_path)
     with open(filename, 'rb') as f:
         (smdh.name_s, smdh.name_l, smdh.publisher, smdh.icon_s, smdh.icon_l) = decode_smdh(f.read(14016))
     smdh.active = True
     return(smdh)
 
 def add_arm9(url, cache_path, archive_path=None):
-    (arm9, filename) = add_item(url, ARM9, cache_path, archive_path)
+    (arm9, filename) = add_item(ARM9, url, cache_path, archive_path)
     arm9.active = True
     return(arm9)
 
 def add_xml(url, cache_path, archive_path=None):
-    (xml, filename) = add_item(url, XML, cache_path, archive_path)
+    (xml, filename) = add_item(XML, url, cache_path, archive_path)
     xml.active = True
     return(xml)
 
-def add_item(url, cls, cache_path, archive_path=None):
+def add_item(cls, url, cache_path, archive_path=None):
     if archive_path:
         filename=os.path.join(cache_path, 'archive_root', archive_path)
     else:
