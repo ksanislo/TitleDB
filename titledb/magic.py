@@ -21,14 +21,15 @@ from .models import (
     ARM9,
     CIA,
     SMDH,
-    TDSX
+    TDSX,
+    XML
 )
 
-mimetypes.add_type('application/x-3ds-archive','.cia')
-mimetypes.add_type('application/x-3ds-homebrew','.3dsx')
-mimetypes.add_type('application/x-3ds-iconfile','.smdh')
-mimetypes.add_type('application/x-3ds-arm9bin','.bin')
-mimetypes.add_type('application/x-3ds-xml','.xml')
+mimetypes.add_type('application/x-3ds-archive', '.cia')
+mimetypes.add_type('application/x-3ds-homebrew', '.3dsx')
+mimetypes.add_type('application/x-3ds-iconfile', '.smdh')
+mimetypes.add_type('application/x-3ds-arm9bin', '.bin')
+mimetypes.add_type('application/x-3ds-xml', '.xml')
 
 def checksum_sha256(filename):
     h = hashlib.sha256()
@@ -62,7 +63,7 @@ def determine_mimetype(filename, content_type=None):
 
 def url_to_cache_path(string, cache_root):
     url_hash = hashlib.sha256(string.encode('utf-8')).hexdigest()
-    cache_path = os.path.join(cache_root,url_hash[0:3],url_hash[3:6],url_hash[6:])
+    cache_path = os.path.join(cache_root, url_hash[0:3], url_hash[3:6], url_hash[6:])
     print(cache_path)
     return(cache_path)
 
@@ -103,7 +104,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         if item.url and item.filename:
             cache_path = url_to_cache_path(item.url, cache_root)
 
-            if item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path,item.filename)):
+            if item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path, item.filename)):
                 if item.etag:
                     headers['If-None-Match'] = '"' + item.etag + '"'
                 elif item.mtime:
@@ -139,11 +140,11 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 item.filename = item.url.split('/')[-1].split('?')[0]
 
             if 'content-type' in r.headers:
-                item.content_type = determine_mimetype(os.path.join(cache_path,item.filename),r.headers['content-type'])
+                item.content_type = determine_mimetype(os.path.join(cache_path, item.filename), r.headers['content-type'])
             else:
-                item.content_type = determine_mimetype(os.path.join(cache_path,item.filename))
+                item.content_type = determine_mimetype(os.path.join(cache_path, item.filename))
 
-            (item.size, item.sha256) = download_to_filename(r, os.path.join(cache_path,item.filename))
+            (item.size, item.sha256) = download_to_filename(r, os.path.join(cache_path, item.filename))
 
             if not item.size or not item.sha256:
                 None # TODO: Errors happened during download.
@@ -194,109 +195,60 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         DBSession.flush()
         return URLSchema().dump(item).data
 
-def add_cia(parent, cache_path, archive_path=None):
-    if archive_path:
-        filename=os.path.join(cache_path,'archive_root',archive_path)
-    else:
-        filename=os.path.join(cache_path,parent.filename)
-
-    item = DBSession.query(CIA).filter_by(url_id=parent.id,path=archive_path).first()
-    if not item:
-        item = CIA(active=False)
-
-    item.path = archive_path
-    item.version = parent.version
-    item.size = os.path.getsize(filename)
-    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
-    item.sha256 = checksum_sha256(filename)
-
+def add_cia(url, cache_path, archive_path=None):
+    (cia, filename) = add_cia(url, CIA, cache_path, archive_path)
     with open(filename, 'rb') as f:
         f.seek(11292)
         try:
-            item.titleid = "%0.16X" % numpy.fromfile(f, dtype='>u8', count=1)[0]
+            cia.titleid = "%0.16X" % numpy.fromfile(f, dtype='>u8', count=1)[0]
         except IndexError:
             return None
 
-        if item.titleid[:8] == "00040000": # and data['titleid'][0:8] != "00048004":
-            item.active = True
+        if cia.titleid[:8] == "00040000": # and data['titleid'][0:8] != "00048004":
+            cia.active = True
 
         f.seek(-14016, 2)
-        (item.name_s,item.name_l,item.publisher,item.icon_s,item.icon_l) = decode_smdh(f.read(14016))
-    return(item)
+        (cia.name_s, cia.name_l, cia.publisher, cia.icon_s, cia.icon_l) = decode_smdh(f.read(14016))
+    return(cia)
 
-def add_tdsx(parent, cache_path, archive_path=None):
-    if archive_path:
-        filename=os.path.join(cache_path,'archive_root',archive_path)
-    else:
-        filename=os.path.join(cache_path,parent.filename)
+def add_tdsx(url, cache_path, archive_path=None):
+    (tdsx, filename) = add_item(url, TDSX, cache_path, archive_path)
+    tdsx.active = True
+    return(tdsx)
 
-    item = DBSession.query(TDSX).filter_by(url_id=parent.id,path=archive_path).first()
-    if not item:
-        item = TDSX(active=False)
-
-    item.path = archive_path
-    item.version = parent.version
-    item.size = os.path.getsize(filename)
-    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
-    item.sha256 = checksum_sha256(filename)
-
-    return(item)
-
-def add_smdh(parent, cache_path, archive_path=None):
-    if archive_path:
-        filename=os.path.join(cache_path,'archive_root',archive_path)
-    else:
-        filename=os.path.join(cache_path,parent.filename)
-
-    item = DBSession.query(SMDH).filter_by(url_id=parent.id,path=archive_path).first()
-    if not item:
-        item = SMDH(active=False)
-
-    item.path = archive_path
-    item.version = parent.version
-    item.size = os.path.getsize(filename)
-    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
-    item.sha256 = checksum_sha256(filename)
-
+def add_smdh(url, cache_path, archive_path=None):
+    (smdh, filename) = add_item(url, SMDH, cache_path, archive_path)
     with open(filename, 'rb') as f:
-        (item.name_s,item.name_l,item.publisher,item.icon_s,item.icon_l) = decode_smdh(f.read(14016))
-    return(item)
+        (smdh.name_s, smdh.name_l, smdh.publisher, smdh.icon_s, smdh.icon_l) = decode_smdh(f.read(14016))
+    smdh.active = True
+    return(smdh)
 
-def add_arm9(parent, cache_path, archive_path=None):
+def add_arm9(url, cache_path, archive_path=None):
+    (arm9, filename) = add_item(url, ARM9, cache_path, archive_path)
+    arm9.active = True
+    return(arm9)
+
+def add_xml(url, cache_path, archive_path=None):
+    (xml, filename) = add_item(url, XML, cache_path, archive_path)
+    xml.active = True
+    return(xml)
+
+def add_item(url, cls, cache_path, archive_path=None):
     if archive_path:
-        filename=os.path.join(cache_path,'archive_root',archive_path)
+        filename=os.path.join(cache_path, 'archive_root', archive_path)
     else:
-        filename=os.path.join(cache_path,parent.filename)
+        filename=os.path.join(cache_path, url.filename)
 
-    item = DBSession.query(ARM9).filter_by(url_id=parent.id,path=archive_path).first()
+    item = DBSession.query(cls).filter_by(url_id=url.id, path=archive_path).first()
     if not item:
-        item = ARM9(active=False)
+        item = cls(active=False)
 
     item.path = archive_path
-    item.version = parent.version
+    item.version = url.version
     item.size = os.path.getsize(filename)
     item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
     item.sha256 = checksum_sha256(filename)
-
-    return(item)
-
-def add_xml(parent, cache_path, archive_path=None):
-    if archive_path:
-        filename=os.path.join(cache_path,'archive_root',archive_path)
-    else:
-        filename=os.path.join(cache_path,parent.filename)
-
-    item = DBSession.query(XML).filter_by(url_id=parent.id,path=archive_path).first()
-    if not item:
-        item = XML(active=False)
-
-    item.path = archive_path
-    item.version = parent.version
-    item.size = os.path.getsize(filename)
-    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
-    item.sha256 = checksum_sha256(filename)
-
-    return(item)
+    return(item, filename)
 
 def decode_smdh(smdh):
     # Decoding this raw is pretty awful, it should read headers...
