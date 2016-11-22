@@ -29,7 +29,7 @@ mimetypes.add_type('application/x-3ds-archive', '.cia')
 mimetypes.add_type('application/x-3ds-homebrew', '.3dsx')
 mimetypes.add_type('application/x-3ds-iconfile', '.smdh')
 mimetypes.add_type('application/x-3ds-arm9bin', '.bin')
-mimetypes.add_type('application/x-3ds-xml', '.xml')
+mimetypes.process_type('application/x-3ds-xml', '.xml')
 
 def checksum_sha256(filename):
     h = hashlib.sha256()
@@ -151,11 +151,11 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
             # FIXME: This would be cleaner as a function.
             switcher = {
-                'application/x-3ds-archive': add_cia,
-                'application/x-3ds-homebrew': add_tdsx,
-                'application/x-3ds-iconfile': add_smdh,
-                'application/x-3ds-arm9bin': add_arm9,
-                'application/x-3ds-xml': add_xml
+                'application/x-3ds-archive': process_cia,
+                'application/x-3ds-homebrew': process_tdsx,
+                'application/x-3ds-iconfile': process_smdh,
+                'application/x-3ds-arm9bin': process_arm9,
+                'application/x-3ds-xml': process_xml
             }
             action = switcher.get(item.content_type, None)
             if action:
@@ -195,8 +195,8 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         DBSession.flush()
         return URLSchema().dump(item).data
 
-def add_cia(url, cache_path, archive_path=None):
-    (cia, filename) = add_item(CIA, url, cache_path, archive_path)
+def process_cia(url, cache_path, archive_path=None):
+    (cia, filename) = find_or_fill_generic(CIA, url, cache_path, archive_path)
     with open(filename, 'rb') as f:
         f.seek(11292)
         try:
@@ -208,32 +208,32 @@ def add_cia(url, cache_path, archive_path=None):
             cia.active = True
 
         f.seek(-14016, 2)
-        (cia.name_s, cia.name_l, cia.publisher, cia.icon_s, cia.icon_l) = decode_smdh(f.read(14016))
+        (cia.name_s, cia.name_l, cia.publisher, cia.icon_s, cia.icon_l) = decode_smdh_data(f.read(14016))
     return(cia)
 
-def add_tdsx(url, cache_path, archive_path=None):
-    (tdsx, filename) = add_item(TDSX, url, cache_path, archive_path)
+def process_tdsx(url, cache_path, archive_path=None):
+    (tdsx, filename) = find_or_fill_generic(TDSX, url, cache_path, archive_path)
     tdsx.active = True
     return(tdsx)
 
-def add_smdh(url, cache_path, archive_path=None):
-    (smdh, filename) = add_item(SMDH, url, cache_path, archive_path)
+def process_smdh(url, cache_path, archive_path=None):
+    (smdh, filename) = find_or_fill_generic(SMDH, url, cache_path, archive_path)
     with open(filename, 'rb') as f:
-        (smdh.name_s, smdh.name_l, smdh.publisher, smdh.icon_s, smdh.icon_l) = decode_smdh(f.read(14016))
+        (smdh.name_s, smdh.name_l, smdh.publisher, smdh.icon_s, smdh.icon_l) = decode_smdh_data(f.read(14016))
     smdh.active = True
     return(smdh)
 
-def add_arm9(url, cache_path, archive_path=None):
-    (arm9, filename) = add_item(ARM9, url, cache_path, archive_path)
+def process_arm9(url, cache_path, archive_path=None):
+    (arm9, filename) = find_or_fill_generic(ARM9, url, cache_path, archive_path)
     arm9.active = True
     return(arm9)
 
-def add_xml(url, cache_path, archive_path=None):
-    (xml, filename) = add_item(XML, url, cache_path, archive_path)
+def process_xml(url, cache_path, archive_path=None):
+    (xml, filename) = find_or_fill_generic(XML, url, cache_path, archive_path)
     xml.active = True
     return(xml)
 
-def add_item(cls, url, cache_path, archive_path=None):
+def find_or_fill_generic(cls, url, cache_path, archive_path=None):
     if archive_path:
         filename=os.path.join(cache_path, 'archive_root', archive_path)
     else:
@@ -250,7 +250,7 @@ def add_item(cls, url, cache_path, archive_path=None):
     item.sha256 = checksum_sha256(filename)
     return(item, filename)
 
-def decode_smdh(smdh):
+def decode_smdh_data(smdh):
     # Decoding this raw is pretty awful, it should read headers...
 
     # freeShop doesn't have SMDH magic. WTF?
