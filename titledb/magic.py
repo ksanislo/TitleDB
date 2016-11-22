@@ -194,18 +194,18 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         DBSession.flush()
         return URLSchema().dump(item).data
 
-def add_cia(url, cache_path, archive_path=None):
+def add_cia(parent, cache_path, archive_path=None):
     if archive_path:
         filename=os.path.join(cache_path,'archive_root',archive_path)
     else:
-        filename=os.path.join(cache_path,url.filename)
+        filename=os.path.join(cache_path,parent.filename)
 
-    item = DBSession.query(CIA).filter_by(url_id=url.id,path=archive_path).first()
+    item = DBSession.query(CIA).filter_by(url_id=parent.id,path=archive_path).first()
     if not item:
         item = CIA(active=False)
 
     item.path = archive_path
-    item.version = url.version
+    item.version = parent.version
     item.size = os.path.getsize(filename)
     item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
     item.sha256 = checksum_sha256(filename)
@@ -224,17 +224,79 @@ def add_cia(url, cache_path, archive_path=None):
         (item.name_s,item.name_l,item.publisher,item.icon_s,item.icon_l) = decode_smdh(f.read(14016))
     return(item)
 
-def add_tdsx(url_entry, cache_path, archive_path=None):
-    None
+def add_tdsx(parent, cache_path, archive_path=None):
+    if archive_path:
+        filename=os.path.join(cache_path,'archive_root',archive_path)
+    else:
+        filename=os.path.join(cache_path,parent.filename)
 
-def add_smdh(url_entry, cache_path, archive_path=None):
-    None
+    item = DBSession.query(TDSX).filter_by(url_id=parent.id,path=archive_path).first()
+    if not item:
+        item = TDSX(active=False)
 
-def add_arm9(url_entry, cache_path, archive_path=None):
-    None
+    item.path = archive_path
+    item.version = parent.version
+    item.size = os.path.getsize(filename)
+    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+    item.sha256 = checksum_sha256(filename)
 
-def add_xml(url_entry, cache_path, archive_path=None):
-    None
+    return(item)
+
+def add_smdh(parent, cache_path, archive_path=None):
+    if archive_path:
+        filename=os.path.join(cache_path,'archive_root',archive_path)
+    else:
+        filename=os.path.join(cache_path,parent.filename)
+
+    item = DBSession.query(SMDH).filter_by(url_id=parent.id,path=archive_path).first()
+    if not item:
+        item = SMDH(active=False)
+
+    item.path = archive_path
+    item.version = parent.version
+    item.size = os.path.getsize(filename)
+    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+    item.sha256 = checksum_sha256(filename)
+
+    with open(filename, 'rb') as f:
+        (item.name_s,item.name_l,item.publisher,item.icon_s,item.icon_l) = decode_smdh(f.read(14016))
+    return(item)
+
+def add_arm9(parent, cache_path, archive_path=None):
+    if archive_path:
+        filename=os.path.join(cache_path,'archive_root',archive_path)
+    else:
+        filename=os.path.join(cache_path,parent.filename)
+
+    item = DBSession.query(ARM9).filter_by(url_id=parent.id,path=archive_path).first()
+    if not item:
+        item = ARM9(active=False)
+
+    item.path = archive_path
+    item.version = parent.version
+    item.size = os.path.getsize(filename)
+    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+    item.sha256 = checksum_sha256(filename)
+
+    return(item)
+
+def add_xml(parent, cache_path, archive_path=None):
+    if archive_path:
+        filename=os.path.join(cache_path,'archive_root',archive_path)
+    else:
+        filename=os.path.join(cache_path,parent.filename)
+
+    item = DBSession.query(XML).filter_by(url_id=parent.id,path=archive_path).first()
+    if not item:
+        item = XML(active=False)
+
+    item.path = archive_path
+    item.version = parent.version
+    item.size = os.path.getsize(filename)
+    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+    item.sha256 = checksum_sha256(filename)
+
+    return(item)
 
 def decode_smdh(smdh):
     # Decoding this raw is pretty awful, it should read headers...
