@@ -11,6 +11,7 @@ import mimetypes
 import numpy
 import base64
 import collections
+import libarchive
 
 from datetime import datetime
 
@@ -154,9 +155,9 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 'application/x-3ds-arm9bin': process_arm9,
                 'application/x-3ds-xml': process_xml
             }
-            action = switcher.get(item.content_type, None)
+            action = switcher.get(item.content_type, process_archive)
             if action:
-                results = action(item, None, cache_path=cache_path)
+                results = action(item, None, cache_path)
                 if results:
                     item.active = True
                     if isinstance(results, collections.Iterable):
@@ -191,6 +192,66 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
         DBSession.flush()
         return URLSchema().dump(item).data
+
+def process_archive(parent, children, cache_path):
+    filename = os.path.join(cache_path, parent.filename)
+    if parent.__class__ == URL:
+        url_id = parent.id
+    else:
+        url_id = parent.url_id
+
+    with libarchive.file_reader(filename) as archive:
+        fnames = list()
+        for entry in archive:
+            if entry.isfile:
+                switcher = {
+                    'application/x-3ds-archive': process_cia,
+                    'application/x-3ds-homebrew': process_tdsx,
+                    'application/x-3ds-iconfile': process_smdh,
+                    'application/x-3ds-arm9bin': process_arm9,
+                    'application/x-3ds-xml': process_xml
+                }
+                action = switcher.get(determine_mimetype(entry.pathname), None)
+                if action:
+                    working_file = os.path.join(cache_path, 'archive_root', entry.pathname)
+                    working_path = '/'.join(working_file.split('/')[:-1])
+                    if not os.path.isdir(working_path):
+                        os.makedirs(working_path)
+                    with open(working_file, 'wb') as f:
+                        for block in entry.get_blocks():
+                            f.write(block)
+                    print(entry.pathname)
+                    fnames.append(entry.pathname)
+
+        fnames = extension_sort(fnames)
+        fnames.reverse() 
+
+        results = dict()
+        for fn in fnames:
+            switcher = {
+                'application/x-3ds-archive': process_cia,
+                'application/x-3ds-homebrew': process_tdsx,
+                'application/x-3ds-iconfile': process_smdh,
+                'application/x-3ds-arm9bin': process_arm9,
+                'application/x-3ds-xml': process_xml
+            }
+            action = switcher.get(determine_mimetype(fn), None)
+            if action == process_tdsx:
+                children = list()
+                lead_in = '.'.join(fn.split('.')[:-1])
+
+
+                import pdb; pdb.set_trace()
+
+                
+                results[fn] = action(parent, children, cache_path, fn)
+            else:
+                results[fn] = action(parent, None, cache_path, fn) 
+
+    new_results = list()
+    for fn in results:
+        new_results.append(results[fn])
+    return(new_results)
 
 def process_cia(parent, children, cache_path, archive_path=None):
     (cia, filename) = find_or_fill_generic(CIA, parent, children, cache_path, archive_path)
@@ -287,3 +348,14 @@ def decode_smdh_data(data):
 
     return (name_s, name_l, publisher, icon_s, icon_l)
 
+def extension_sort(lines):
+    sortlist = list()
+    for l in lines:
+        line = l.rstrip('\n').split('.')[::-1]
+        sortlist.append(line)
+    lines = sorted(sortlist)
+    sortlist = list()
+    for l in lines:
+        line = '.'.join(l[::-1])
+        sortlist.append(line)
+    return(sortlist)
