@@ -156,7 +156,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             }
             action = switcher.get(item.content_type, None)
             if action:
-                results = action(item, cache_path=cache_path)
+                results = action(item, None, cache_path=cache_path)
                 if results:
                     item.active = True
                     if isinstance(results, collections.Iterable):
@@ -192,8 +192,8 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         DBSession.flush()
         return URLSchema().dump(item).data
 
-def process_cia(parent, cache_path, archive_path=None):
-    (cia, filename) = find_or_fill_generic(CIA, parent, cache_path, archive_path)
+def process_cia(parent, children, cache_path, archive_path=None):
+    (cia, filename) = find_or_fill_generic(CIA, parent, children, cache_path, archive_path)
     with open(filename, 'rb') as f:
         f.seek(11292)
         try:
@@ -208,29 +208,29 @@ def process_cia(parent, cache_path, archive_path=None):
         (cia.name_s, cia.name_l, cia.publisher, cia.icon_s, cia.icon_l) = decode_smdh_data(f.read(14016))
     return(cia)
 
-def process_tdsx(parent, cache_path, archive_path=None):
-    (tdsx, filename) = find_or_fill_generic(TDSX, parent, cache_path, archive_path)
+def process_tdsx(parent, children, cache_path, archive_path=None):
+    (tdsx, filename) = find_or_fill_generic(TDSX, parent, children, cache_path, archive_path)
     tdsx.active = True
     return(tdsx)
 
-def process_smdh(parent, cache_path, archive_path=None):
-    (smdh, filename) = find_or_fill_generic(SMDH, parent, cache_path, archive_path)
+def process_smdh(parent, children, cache_path, archive_path=None):
+    (smdh, filename) = find_or_fill_generic(SMDH, parent, children, cache_path, archive_path)
     with open(filename, 'rb') as f:
         (smdh.name_s, smdh.name_l, smdh.publisher, smdh.icon_s, smdh.icon_l) = decode_smdh_data(f.read(14016))
     smdh.active = True
     return(smdh)
 
-def process_arm9(parent, cache_path, archive_path=None):
-    (arm9, filename) = find_or_fill_generic(ARM9, parent, cache_path, archive_path)
+def process_arm9(parent, children, cache_path, archive_path=None):
+    (arm9, filename) = find_or_fill_generic(ARM9, parent, children, cache_path, archive_path)
     arm9.active = True
     return(arm9)
 
-def process_xml(parent, cache_path, archive_path=None):
-    (xml, filename) = find_or_fill_generic(XML, parent, cache_path, archive_path)
+def process_xml(parent, children, cache_path, archive_path=None):
+    (xml, filename) = find_or_fill_generic(XML, parent, children, cache_path, archive_path)
     xml.active = True
     return(xml)
 
-def find_or_fill_generic(cls, parent, cache_path, archive_path=None):
+def find_or_fill_generic(cls, parent, children, cache_path, archive_path=None):
     if archive_path:
         filename = os.path.join(cache_path, 'archive_root', archive_path)
     else:
@@ -250,6 +250,23 @@ def find_or_fill_generic(cls, parent, cache_path, archive_path=None):
     item.size = os.path.getsize(filename)
     item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
     item.sha256 = checksum_sha256(filename)
+
+    if children:
+        if not isinstance(children, collections.Iterable):
+            children = [children]
+
+        for child in children:
+            exec('item.'+child.__class__.__name__.lower()+'_id = child.id')
+            import pdb; pdb.set_trace()
+            #if child.__class__ == Entry:
+            #    item.entry_id = child.id
+            #elif child.__class__ == Assets:
+            #    item.assets_id = child.id
+            #elif child.__class__ == SMDH:
+            #    item.smdh_id = child.id
+            #elif child.__class__ == XML:
+            #    item.xml_id = child.id
+
     return(item, filename)
 
 def decode_smdh_data(data):
