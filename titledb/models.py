@@ -108,12 +108,12 @@ class URLSchema(GenericSchema):
     sha256 = fields.String()
 
 class URLSchemaNested(URLSchema):
-    cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','url_id','url'])
-    tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','url_id','url'])
-    smdh = fields.Nested('SMDHSchemaNested', many=True, exclude=['active','url_id','url'])
-    xml = fields.Nested('XMLSchemaNested', many=True, exclude=['active','url_id','url'])
-    arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','url_id','url'])
-    assets = fields.Nested('AssetsSchemaNested', many=True, exclude=['active','url_id','url'])
+    cia = fields.Nested('CIASchemaNested', many=True, exclude=['active','url_id','url','tdsx','smdh','xml','arm9','assets'])
+    tdsx = fields.Nested('TDSXSchemaNested', many=True, exclude=['active','url_id','url','tdsx','smdh','xml','arm9','assets'])
+    smdh = fields.Nested('SMDHSchemaNested', many=True, exclude=['active','url_id','url','tdsx','smdh','xml','arm9','assets'])
+    xml = fields.Nested('XMLSchemaNested', many=True, exclude=['active','url_id','url','tdsx','smdh','xml','arm9','assets'])
+    arm9 = fields.Nested('ARM9SchemaNested', many=True, exclude=['active','url_id','url','tdsx','smdh','xml','arm9','assets'])
+    assets = fields.Nested('AssetsSchemaNested', many=True, exclude=['active','url_id','url','tdsx','smdh','xml','arm9','assets'])
 
 class Entry(GenericBase):
     __tablename__ = 'entry'

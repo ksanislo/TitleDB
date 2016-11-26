@@ -69,7 +69,7 @@ from time import (
 
 from datetime import datetime
 from urllib import parse
-
+from collections import OrderedDict
 
 class register_views(object):
     def __init__(self, route=None, collection_route=None):
@@ -258,7 +258,12 @@ class TitleDBViews:
 
     @view_config(route_name='home')
     def home(self):
-        return dict(api_version=self.active_version)
+        results = OrderedDict(api_version=self.active_version)
+        introspector = self.request.registry.introspector
+        for route in introspector.get_category('routes'):
+            results[route['introspectable']['name']] = route['introspectable']['pattern']
+
+        return(results)
 
     @view_config(route_name='cia_collection_v0', renderer='json')
     def legacy_list_v0(self):

@@ -195,6 +195,11 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         # Realize all subitems
         for subitem in subitems:
             subitem.url_id = item.id
+            if subitem.__class__ == TDSX:
+                for checkitem in subitems:
+                    if checkitem != subitem and checkitem.path.split('.')[:-1] == subitem.path.split('.')[:-1]:
+                        exec('subitem.'+checkitem.__class__.__name__.lower()+'_id = checkitem.id')
+                    
             if not subitem.id:
                 DBSession.add(subitem)
                 DBSession.flush()
