@@ -7,6 +7,7 @@ import transaction
 import json
 import os
 import re
+import rarfile
 import mimetypes
 import numpy
 import base64
@@ -31,6 +32,12 @@ mimetypes.add_type('application/x-3ds-homebrew', '.3dsx')
 mimetypes.add_type('application/x-3ds-iconfile', '.smdh')
 mimetypes.add_type('application/x-3ds-arm9bin', '.bin')
 mimetypes.add_type('application/x-3ds-xml', '.xml')
+
+# RAR is bad. Please don't use proprietary formats.
+rarfile.UNRAR_TOOL = "unrar-nonfree"
+rarfile.NEED_COMMENTS = 0
+rarfile.USE_DATETIME = 1
+rarfile.PATH_SEP = '/'
 
 def checksum_sha256(filename):
     h = hashlib.sha256()
@@ -149,6 +156,8 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
             # FIXME: This would be cleaner as a function.
             switcher = {
+                'application/rar': process_rar_archive,
+
                 'application/x-3ds-archive': process_cia,
                 'application/x-3ds-homebrew': process_tdsx,
                 'application/x-3ds-iconfile': process_smdh,
@@ -200,10 +209,45 @@ def process_archive(parent, children, cache_path):
     else:
         url_id = parent.url_id
 
-    with libarchive.file_reader(filename) as archive:
-        fnames = list()
-        for entry in archive:
-            if entry.isfile:
+    results = list()
+    try:
+        with libarchive.file_reader(filename) as archive:
+            for entry in archive:
+                if entry.isfile:
+                    switcher = {
+                        'application/x-3ds-archive': process_cia,
+                        'application/x-3ds-homebrew': process_tdsx,
+                        'application/x-3ds-iconfile': process_smdh,
+                        'application/x-3ds-arm9bin': process_arm9,
+                        'application/x-3ds-xml': process_xml
+                    }
+                    action = switcher.get(determine_mimetype(entry.pathname), None)
+                    if action:
+                        working_file = os.path.join(cache_path, 'archive_root', entry.pathname)
+                        working_path = '/'.join(working_file.split('/')[:-1])
+                        if not os.path.isdir(working_path):
+                            os.makedirs(working_path)
+                        with open(working_file, 'wb') as f:
+                            for block in entry.get_blocks():
+                                f.write(block)
+                        os.utime(working_file, (entry.mtime,entry.mtime))
+                        results.append(action(parent, children, cache_path, entry.pathname))
+    except libarchive.exception.ArchiveError as e:
+        print(e)
+
+    return(results)
+
+def process_rar_archive(parent, children, cache_path):
+    filename = os.path.join(cache_path, parent.filename)
+    if parent.__class__ == URL:
+        url_id = parent.id
+    else:
+        url_id = parent.url_id
+
+    results = list()
+    try:
+        with rarfile.RarFile(filename) as archive:
+            for entry in archive.infolist():
                 switcher = {
                     'application/x-3ds-archive': process_cia,
                     'application/x-3ds-homebrew': process_tdsx,
@@ -211,47 +255,23 @@ def process_archive(parent, children, cache_path):
                     'application/x-3ds-arm9bin': process_arm9,
                     'application/x-3ds-xml': process_xml
                 }
-                action = switcher.get(determine_mimetype(entry.pathname), None)
+                action = switcher.get(determine_mimetype(entry.filename), None)
                 if action:
-                    working_file = os.path.join(cache_path, 'archive_root', entry.pathname)
+                    working_file = os.path.join(cache_path, 'archive_root', entry.filename)
                     working_path = '/'.join(working_file.split('/')[:-1])
                     if not os.path.isdir(working_path):
                         os.makedirs(working_path)
                     with open(working_file, 'wb') as f:
-                        for block in entry.get_blocks():
-                            f.write(block)
-                    print(entry.pathname)
-                    fnames.append(entry.pathname)
+                        with archive.open(entry.filename, 'r') as a:
+                            for block in iter((lambda:a.read(32768)),''):
+                                if not block: break
+                                f.write(block)
+                    os.utime(working_file, (entry.date_time.timestamp(),entry.date_time.timestamp()))
+                    results.append(action(parent, children, cache_path, entry.filename))
+    except rarfile.Error as e:
+        print(e)
 
-        fnames = extension_sort(fnames)
-        fnames.reverse() 
-
-        results = dict()
-        for fn in fnames:
-            switcher = {
-                'application/x-3ds-archive': process_cia,
-                'application/x-3ds-homebrew': process_tdsx,
-                'application/x-3ds-iconfile': process_smdh,
-                'application/x-3ds-arm9bin': process_arm9,
-                'application/x-3ds-xml': process_xml
-            }
-            action = switcher.get(determine_mimetype(fn), None)
-            if action == process_tdsx:
-                children = list()
-                lead_in = '.'.join(fn.split('.')[:-1])
-
-
-                import pdb; pdb.set_trace()
-
-                
-                results[fn] = action(parent, children, cache_path, fn)
-            else:
-                results[fn] = action(parent, None, cache_path, fn) 
-
-    new_results = list()
-    for fn in results:
-        new_results.append(results[fn])
-    return(new_results)
+    return(results)
 
 def process_cia(parent, children, cache_path, archive_path=None):
     (cia, filename) = find_or_fill_generic(CIA, parent, children, cache_path, archive_path)
@@ -283,7 +303,10 @@ def process_smdh(parent, children, cache_path, archive_path=None):
 
 def process_arm9(parent, children, cache_path, archive_path=None):
     (arm9, filename) = find_or_fill_generic(ARM9, parent, children, cache_path, archive_path)
-    arm9.active = True
+    with open(filename, 'rb') as f:
+        # Look for ARM instruction: mov sp, #0x27000000
+        if 0xE3A0D427 in numpy.fromfile(f, dtype='<u4', count=32):
+            arm9.active = True
     return(arm9)
 
 def process_xml(parent, children, cache_path, archive_path=None):
@@ -318,15 +341,6 @@ def find_or_fill_generic(cls, parent, children, cache_path, archive_path=None):
 
         for child in children:
             exec('item.'+child.__class__.__name__.lower()+'_id = child.id')
-            import pdb; pdb.set_trace()
-            #if child.__class__ == Entry:
-            #    item.entry_id = child.id
-            #elif child.__class__ == Assets:
-            #    item.assets_id = child.id
-            #elif child.__class__ == SMDH:
-            #    item.smdh_id = child.id
-            #elif child.__class__ == XML:
-            #    item.xml_id = child.id
 
     return(item, filename)
 
@@ -348,14 +362,3 @@ def decode_smdh_data(data):
 
     return (name_s, name_l, publisher, icon_s, icon_l)
 
-def extension_sort(lines):
-    sortlist = list()
-    for l in lines:
-        line = l.rstrip('\n').split('.')[::-1]
-        sortlist.append(line)
-    lines = sorted(sortlist)
-    sortlist = list()
-    for l in lines:
-        line = '.'.join(l[::-1])
-        sortlist.append(line)
-    return(sortlist)
