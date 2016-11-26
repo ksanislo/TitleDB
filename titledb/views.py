@@ -344,7 +344,7 @@ class TitleDBViews:
                     return FileResponse(
                                'cache/'+ parse.quote_plus(cia.url) +'/'+cia.path,
                                request=request,
-                               content_type='application/x-3dsarchive'
+                               content_type='application/x-3ds-archive'
                            )
                 else:
                     return HTTPFound(location=cia.url)
