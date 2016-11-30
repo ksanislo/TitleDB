@@ -196,6 +196,11 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 results = [results]
                 results.extend(find_nonarchive_results(item))
 
+            # Realize all subitems
+            for result_item in results:
+                if not result_item.url_id:
+                    result_item.url_id = item.id
+
             # Match up any xml or smdh files in the same folder as our 3dsx.
             for result_item in results:
                 if result_item.__class__ == TDSX:
@@ -203,14 +208,9 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                         if check_siblings(check_item, result_item):
                             exec('result_item.'+check_item.__class__.__name__.lower()+'_id = check_item.id')
 
-            # Realize all subitems
-            for result_item in results:
-                if not result_item.url_id:
-                    result_item.url_id = item.id
-
-            if not result_item.id and result_item.active:
-                DBSession.add(result_item)
-                DBSession.flush()
+                if not result_item.id and result_item.active:
+                    DBSession.add(result_item)
+                    DBSession.flush()
 
         DBSession.flush()
         return URLSchema().dump(item).data
