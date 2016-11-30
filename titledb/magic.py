@@ -20,11 +20,13 @@ from .models import (
     DBSession,
     URL,
     URLSchema,
+    Entry,
     ARM9,
     CIA,
     SMDH,
     TDSX,
-    XML
+    XML,
+    Assets
 )
 
 mimetypes.add_type('application/x-3ds-archive', '.cia')
@@ -126,7 +128,8 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             and ('If-None-Match' in headers or 'If-Modified-Since' in headers):
             r.status_code = 304
 
-        subitems = []
+        #subitems = []
+        results = None
         if r.status_code == 200:
             item.version = find_version_in_string(item.url)
 
@@ -154,7 +157,6 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             if not item.size or not item.sha256:
                 None # TODO: Errors happened during download.
 
-            # FIXME: This would be cleaner as a function.
             switcher = {
                 'application/rar': process_rar_archive,
 
@@ -166,13 +168,10 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             }
             action = switcher.get(item.content_type, process_archive)
             if action:
-                results = action(item, None, cache_path)
+                relatives = find_item_relatives(item)
+                results = action(item, relatives, cache_path)
                 if results:
                     item.active = True
-                    if isinstance(results, collections.Iterable):
-                        subitems.extend(results)
-                    else:
-                        subitems.append(results)
             else:
                 item.active = False
 
@@ -192,22 +191,68 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 DBSession.rollback()
                 return(None)
 
-        # Realize all subitems
-        for subitem in subitems:
-            subitem.url_id = item.id
-            if subitem.__class__ == TDSX:
-                for checkitem in subitems:
-                    if checkitem != subitem and checkitem.path.split('.')[:-1] == subitem.path.split('.')[:-1]:
-                        exec('subitem.'+checkitem.__class__.__name__.lower()+'_id = checkitem.id')
-                    
-            if not subitem.id:
-                DBSession.add(subitem)
+        if results:
+            if not isinstance(results, collections.Iterable):
+                results = [results]
+                results.extend(find_nonarchive_results(item))
+
+            # Match up any xml or smdh files in the same folder as our 3dsx.
+            for result_item in results:
+                if result_item.__class__ == TDSX:
+                    for check_item in results:
+                        if check_siblings(check_item, result_item):
+                            exec('result_item.'+check_item.__class__.__name__.lower()+'_id = check_item.id')
+
+            # Realize all subitems
+            for result_item in results:
+                if not result_item.url_id:
+                    result_item.url_id = item.id
+
+            if not result_item.id and result_item.active:
+                DBSession.add(result_item)
                 DBSession.flush()
 
         DBSession.flush()
         return URLSchema().dump(item).data
 
-def process_archive(parent, children, cache_path):
+def find_nonarchive_results(item):
+    results = list()
+    url_like = '/'.join(item.url.split('?')[0].split('/')[:-1]) + '/%'
+    filename_like = '.'.join(item.filename.split('.')[:-1]) + '.%'
+    # TODO: I'm sure this could be more efficient with a join somehow.
+    urls = DBSession.query(URL).filter(URL.url.like(url_like)).filter(URL.filename.like(filename_like)).all()
+    for url in urls:
+        for item_cls in (TDSX, SMDH, XML):
+            new_items = DBSession.query(item_cls).filter(item_cls.url_id == url.id).all()
+            results.extend(new_items)
+    return(results)
+
+def check_siblings(first, second):
+    if first == second:
+        return(False)
+
+    if first.path and second.path \
+        and first.url_id == second.url_id \
+        and first.path.split('.')[:-1] == second.path.split('.')[:-1]:
+        return(True)
+
+    if not first.path and not second.path:
+        first_url = DBSession.query(URL).get(first.url_id)
+        second_url = DBSession.query(URL).get(second.url_id)
+        if first_url.url.split('?')[0].split('/')[:-1]+first_url.filename.split('.')[:-1] == second_url.url.split('?')[0].split('/')[:-1]+second_url.filename.split('.')[:-1]:
+            return(True)
+
+    return(False)
+
+def find_item_relatives(item):
+    previous_item = DBSession.query(URL).filter(URL.url.like(item.url.replace(item.version,'%'))).order_by(URL.created_at.desc()).first()
+    relatives = list()
+    for item_cls in (CIA, TDSX, ARM9):
+        new_items = DBSession.query(item_cls).filter(item_cls.url_id == item.id).all()
+        relatives.extend(new_items)
+    return(relatives)
+
+def process_archive(parent, relatives, cache_path):
     filename = os.path.join(cache_path, parent.filename)
     if parent.__class__ == URL:
         url_id = parent.id
@@ -236,13 +281,13 @@ def process_archive(parent, children, cache_path):
                             for block in entry.get_blocks():
                                 f.write(block)
                         os.utime(working_file, (entry.mtime,entry.mtime))
-                        results.append(action(parent, children, cache_path, entry.pathname))
+                        results.append(action(parent, relatives, cache_path, entry.pathname))
     except libarchive.exception.ArchiveError as e:
         print(e)
 
     return(results)
 
-def process_rar_archive(parent, children, cache_path):
+def process_rar_archive(parent, relatives, cache_path):
     filename = os.path.join(cache_path, parent.filename)
     if parent.__class__ == URL:
         url_id = parent.id
@@ -272,14 +317,14 @@ def process_rar_archive(parent, children, cache_path):
                                 if not block: break
                                 f.write(block)
                     os.utime(working_file, (entry.date_time.timestamp(),entry.date_time.timestamp()))
-                    results.append(action(parent, children, cache_path, entry.filename))
+                    results.append(action(parent, relatives, cache_path, entry.filename))
     except rarfile.Error as e:
         print(e)
 
     return(results)
 
-def process_cia(parent, children, cache_path, archive_path=None):
-    (cia, filename) = find_or_fill_generic(CIA, parent, children, cache_path, archive_path)
+def process_cia(parent, relatives, cache_path, archive_path=None):
+    (cia, filename) = find_or_fill_generic(CIA, parent, relatives, cache_path, archive_path)
     with open(filename, 'rb') as f:
         f.seek(11292)
         try:
@@ -294,32 +339,32 @@ def process_cia(parent, children, cache_path, archive_path=None):
         (cia.name_s, cia.name_l, cia.publisher, cia.icon_s, cia.icon_l) = decode_smdh_data(f.read(14016))
     return(cia)
 
-def process_tdsx(parent, children, cache_path, archive_path=None):
-    (tdsx, filename) = find_or_fill_generic(TDSX, parent, children, cache_path, archive_path)
+def process_tdsx(parent, relatives, cache_path, archive_path=None):
+    (tdsx, filename) = find_or_fill_generic(TDSX, parent, relatives, cache_path, archive_path)
     tdsx.active = True
     return(tdsx)
 
-def process_smdh(parent, children, cache_path, archive_path=None):
-    (smdh, filename) = find_or_fill_generic(SMDH, parent, children, cache_path, archive_path)
+def process_smdh(parent, relatives, cache_path, archive_path=None):
+    (smdh, filename) = find_or_fill_generic(SMDH, parent, relatives, cache_path, archive_path)
     with open(filename, 'rb') as f:
         (smdh.name_s, smdh.name_l, smdh.publisher, smdh.icon_s, smdh.icon_l) = decode_smdh_data(f.read(14016))
     smdh.active = True
     return(smdh)
 
-def process_arm9(parent, children, cache_path, archive_path=None):
-    (arm9, filename) = find_or_fill_generic(ARM9, parent, children, cache_path, archive_path)
+def process_arm9(parent, relatives, cache_path, archive_path=None):
+    (arm9, filename) = find_or_fill_generic(ARM9, parent, relatives, cache_path, archive_path)
     with open(filename, 'rb') as f:
         # Look for ARM instruction: mov sp, #0x27000000
         if 0xE3A0D427 in numpy.fromfile(f, dtype='<u4', count=32):
             arm9.active = True
     return(arm9)
 
-def process_xml(parent, children, cache_path, archive_path=None):
-    (xml, filename) = find_or_fill_generic(XML, parent, children, cache_path, archive_path)
+def process_xml(parent, relatives, cache_path, archive_path=None):
+    (xml, filename) = find_or_fill_generic(XML, parent, relatives, cache_path, archive_path)
     xml.active = True
     return(xml)
 
-def find_or_fill_generic(cls, parent, children, cache_path, archive_path=None):
+def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
     if archive_path:
         filename = os.path.join(cache_path, 'archive_root', archive_path)
     else:
@@ -340,12 +385,32 @@ def find_or_fill_generic(cls, parent, children, cache_path, archive_path=None):
     item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
     item.sha256 = checksum_sha256(filename)
 
-    if children:
-        if not isinstance(children, collections.Iterable):
-            children = [children]
+    if relatives:
+        if not isinstance(relatives, collections.Iterable):
+            relatives = [relatives]
 
-        for child in children:
-            exec('item.'+child.__class__.__name__.lower()+'_id = child.id')
+        relative_entry_ids = []
+        relative_assets_ids = []
+        for relative in relatives:
+            if relative.entry_id:
+                relative_entry_ids.append(relative.entry_id)
+
+            if relative.assets_id:
+                relative_assets_ids.appent(relative.assets_id)
+
+            # Try to find an exact match for this file in our relatives.
+            if relative.__class__ == item.__class__ and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
+                item.entry_id = relative.entry_id
+                item.assets_id = relative.assets_id
+
+        # If there's still nothing, add the most common entry_id and assets_id from the relatives.
+        if 'entry_id' in dir(item) and not item.entry_id and relative_entry_ids:
+            counter = collections.Counter(relative_entry_ids)
+            item.entry_id = counter.most_common(1)[0][0]
+
+        if 'assets_id' in dir(item) and not item.assets_id and relative_assets_ids:
+            counter = collections.Counter(relative_assets_ids)
+            item.assets_id = counter.most_common(1)[0][0]
 
     return(item, filename)
 
