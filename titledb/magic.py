@@ -196,7 +196,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 results = [results]
                 results.extend(find_nonarchive_results(item))
 
-            # Realize all subitems
+            # Make sure everything new gets a url_id before we try to find siblings.
             for result_item in results:
                 if not result_item.url_id:
                     result_item.url_id = item.id
