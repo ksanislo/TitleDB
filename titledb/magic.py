@@ -372,11 +372,11 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
     else:
         filename = os.path.join(cache_path, parent.filename)
 
+    # FIXME: This should find parent URL by url string, not id.
     if parent.__class__ == URL:
         url_id = parent.id
     else:
         url_id = parent.url_id
-
     item = DBSession.query(cls).filter_by(url_id=url_id, path=archive_path).first()
     if not item:
         item = cls(active=False)
