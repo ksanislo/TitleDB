@@ -239,8 +239,8 @@ def check_siblings(first, second):
     if not first.path and not second.path:
         first_url = DBSession.query(URL).get(first.url_id)
         second_url = DBSession.query(URL).get(second.url_id)
-        first_identifier = first_url.url.replace(first_url.filename.split('.')[-1], '')
-        second_identifier = second_url.url.replace(second_url.filename.split('.')[-1], '')
+        first_identifier = first_url.url.replace(first_url.filename, '') + '.'.join(first_url.filename.split('.')[:-1])
+        second_identifier = second_url.url.replace(second_url.filename, '') + '.'.join(second_url.filename.split('.')[:-1])
         if first_identifier == second_identifier:
             return(True)
 
