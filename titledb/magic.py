@@ -143,7 +143,15 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %H:%M:%S %Z')
 
             if 'content-disposition' in r.headers:
-                item.filename = r.headers['content-disposition'].partition('filename=')[2].strip('"').split('/')[-1]
+                #import pdb; pdb.set_trace()
+                #item.filename = r.headers['content-disposition'].partition('filename=')[2].strip('"').split('/')[-1]
+                re_result = re.search('(?<=filename=")[^"]+', r.headers['content-disposition'])
+                if not re_result:
+                   re_result = re.search('(?<=filename=).+', r.headers['content-disposition'])
+                if re_result:
+                    item.filename = re_result.group(0)
+                else:
+                    raise
             else:
                 item.filename = item.url.split('/')[-1].split('?')[0]
 
@@ -196,13 +204,41 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 results = [results]
                 results.extend(find_nonarchive_results(item))
 
-            # Make sure everything new gets a url_id before we try to find siblings.
+            # Make sure everything new gets a url_id before anything else
             for result_item in results:
                 if not result_item.url_id:
                     result_item.url_id = item.id
 
-            # Match up any xml or smdh files in the same folder as our 3dsx.
+            # Find any existing entry_id if we have one
+            use_entry_id = None
             for result_item in results:
+                if 'entry_id' in dir(result_item) and result_item.entry_id:
+                    use_entry_id = result_item.entry_id
+                    break
+
+            for result_item in results:
+                if not use_entry_id and result_item.__class__ in (SMDH, CIA):
+                    new_entry = Entry(active=1,
+                                      name=result_item.name_s,
+                                      author=result_item.publisher, 
+                                      headline=result_item.name_l)
+                    DBSession.add(new_entry)
+                    DBSession.flush()
+                    use_entry_id = new_entry.id
+                    break
+
+            # Loop over all result items and set avaliable info, realise in the DB if they're new.
+            for result_item in results:
+                if not result_item.id and result_item.active:
+                    DBSession.add(result_item)
+                    DBSession.flush()
+
+            # Once more over everything, now that we have valid ids for everything.
+            for result_item in results:
+                if use_entry_id and 'entry_id' in dir(result_item) and not result_item.entry_id:
+                    result_item.entry_id = use_entry_id
+
+                # Match up any xml or smdh files in the same folder as our 3dsx.
                 if result_item.__class__ == TDSX:
                     for check_item in results:
                         if check_siblings(check_item, result_item):
@@ -247,7 +283,7 @@ def check_siblings(first, second):
     return(False)
 
 def find_item_relatives(item):
-    previous_item = DBSession.query(URL).filter(URL.url.like(item.url.replace(item.version,'%'))).order_by(URL.created_at.desc()).first()
+    previous_item = DBSession.query(URL).filter(URL.url.like(item.url.replace(str(item.version),'%'))).order_by(URL.created_at.desc()).first()
     relatives = list()
     for item_cls in (CIA, TDSX, ARM9):
         new_items = DBSession.query(item_cls).filter(item_cls.url_id == item.id).all()
