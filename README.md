@@ -1,3 +1,54 @@
 # TitleDB.com
 
 TitleDB.com API rewritten as a proper Python WSGI application.
+
+I'll try to get some proper docs written up on the new API so you can figure out how you want handle all the new stuff, but here's the short version if you just want to play with it. Right now the overall idea is that there's a /v1/, which is the "nested" collection view of /v1/entry that doesn't show base64 encoded data (currently just icon data), all other collections are un-nested views. Calling / directly just reports some information about the backend (Only latest API version right now. This may change before this moves to prod.)
+
+Normal object collections (mods can edit/add to as required):
+/entry
+/category
+
+File object collections (these will generally will be filled by the scan/import and should be mostly static except for 'active'):
+/cia
+/tdsx (starting with numbers will cause problems for developers)
+/smdh
+/xml
+/arm9
+
+Special object collections (File object, but with editable "mapping" script that moderators will need to provide/edit):
+/assets
+
+When a collection is called with a GET, the collection will return a list of all items where the 'active' field is set to True, as such you can make a new entry, just by POSTing the json { "active": True } to a collection URL, though it's more useful to post the full json object for what you wish to create at once. Some fields like 'id' can't be changed or specified, but you will get your new object with it defined in the result.
+
+All objects have an 'id' field that will remain static for that object, so for example a new version of a .cia will have a new entry with a new id. Associations are made between various objects based on an *_id field (e.g. entry_id) referencing the id of the corresponding object.
+
+Specific objects can be referenced with a GET on their individual id, such as /cia/44 or /entry/1, and can be edited by using a PUT with a json object containing the new information to be set, such as { "category_id": 2 }. At the moment, the single object GET will return a nested view, where all *_id values will be replaced with their corresponding object. And any objects matching foreign keys will be embedded. For example when listing an entry, the category_id record will be replaced by 'category' set to the name value, and additional object lists for cia, tdsx, and arm9 will show up with any objects which have a foreign key of 'entry_id' matching the 'id' on the record.
+
+I haven't decided entirely how I'm going to handle icon generation or proxying, so that's all kind of up in the air right now as well. I'm leaning toward /cia/{id}/icon_l.{format} for providing the icon_l entry encoded into the specified format (e.g. /cia/44/icon_s.png or /smdh/7/icon_s.gif) then developers can choose their preferred icon format on their own. If you have any input on this, feel free to let me know.
+
+Proxy extraction is also undecided, I'm thinking that i'll implement as /v1/proxy/{filetype}/{id} so it can be expanded to allow proxy extract for types other than cia. However, it's notably less useful for arm9's .bin and .3dsx files especially, with their separate .smdh and .xml that's usually archived in with the executable binary. Again, suggestions are welcome if you have any.
+
+Nesting will be selectable on/off at some point for both collections and records, but I've not decided quite how I want to implement that either. The current method is a good intermediate option though, as apps and interfaces will generally want to just pull down everything as collections, which gives the un-nested view, and a pull on a single object will show all related information, avoiding the need for additional requests. It does make editing a bit strange however, as your GET returns a nested view, but you still have to PUT/POST with the *_id values.
+
+DELETE is also supported, but only by admin accounts, since an object's id will be considered static, delisting will be done instead, by setting 'active' to False on the record by general moderators.
+
+For the moment, the authorization controls on http://dev.titledb.com are disabled, so everyone has full admin rights, and can utilize all of these functions to test things out. 
+
+Authentication is currently managed with basic web pages on /login and /logout, and current status can be checked via /login_status, I've not settled on how this should be implemented quite yet, so things will change around a bit here. This is why authorization is currently disabled.
+
+There's also a /time object which will return the current time in ISO8601 format, but it's more for the 3DS homebrew developer than a website.
+
+Feel free to play around with the dev preview and and make a few records to try it all out. The database may get blown away here or there while I'm working with it though, as right now dev is being served by a reverse proxy pointed at my local development environment at home. I'll switch this out to a proper uWSGI deployment on a hosted server in the next few days though, and set it up with hooks to track the GitHub repository as commits are published instead.
+
+
+For example, here is entry #58, and it's associated components with nesting disabled for clarity:
+
+https://dev.titledb.com/v1/entry/58?nested=false
+https://dev.titledb.com/v1/url/58?nested=false
+https://dev.titledb.com/v1/cia/84?nested=false
+https://dev.titledb.com/v1/tdsx/38?nested=false
+https://dev.titledb.com/v1/smdh/31?nested=false
+https://dev.titledb.com/v1/xml/9?nested=false
+
+And here's entry #166 with nesting (notable for having 3dsx/smdh and arm9):
+https://dev.titledb.com/v1/entry/166
