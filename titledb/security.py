@@ -21,7 +21,7 @@ def check_password(pw, hashed_pw):
 
 def authtkt_callback(userid, request):
     try:
-        userquery = DBSession.query(User).filter_by(name=userid,active=True).one()
+        userquery = DBSession.query(User).filter_by(name=userid, active=True).one()
     except NoResultFound:
         return None
 
@@ -29,7 +29,7 @@ def authtkt_callback(userid, request):
 
     groups = []
     for item in groupquery:
-        groups.append("group:"+item.name)
+        groups.append("group:" + item.name)
 
     log.debug('Callback checking user: %s (groups: %s)', userid, groups)
     return groups

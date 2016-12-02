@@ -1,3 +1,3 @@
 
-def verify_cache():
-    None
+def verify_cache(item):
+    return True

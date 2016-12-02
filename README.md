@@ -37,13 +37,11 @@ https://dev.titledb.com/v1/entry?nested=true&exclude=cia.icon_l&exclude=cia.icon
 
 DELETE is also supported, but only by admin accounts, since an object's id will be considered static, delisting will be done instead, by setting 'active' to False on the record by general moderators.
 
-For the moment, the authorization controls on http://dev.titledb.com are disabled, so everyone has full admin rights, and can utilize all of these functions to test things out. 
-
-Authentication is currently managed with basic web pages on /v1/login and /v1/logout, and current status can be checked via /v1/login_status, I've not settled on how this should be implemented quite yet, so things will change around a bit here. This is why authorization is currently disabled.
+Authentication is currently managed with basic web pages on /v1/login and /v1/logout, and current status can be checked via /v1/login_status, I've not settled on how this should be implemented quite yet, so things will change around a bit here.
 
 There's also a /v1/time object which will return the current time in ISO8601 format
 
-Feel free to play around with the dev preview and and make a few records to try it all out. The database may get blown away here or there while I'm working with it though, as right now dev is being served by a reverse proxy pointed at my local development environment at home. I'll switch this out to a proper uWSGI deployment on a hosted server in the near future, and set it up with hooks to track the GitHub repository as commits are published instead.
+Feel free to play around with the dev preview and try it all out. The database may get blown away here or there while I'm working with it though, as right now dev is being served by a reverse proxy pointed at my local development environment at home. I'll switch this out to a proper uWSGI deployment on a hosted server in the near future, and set it up with hooks to track the GitHub repository as commits are published instead.
 
 
 For example, here is entry #58, and it's associated components with nesting disabled for clarity:  

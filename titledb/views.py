@@ -2,6 +2,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import json
+import os
 
 from datetime import datetime
 
@@ -63,6 +64,8 @@ from .models import (
     User,
     Group
 )
+
+from .magic import url_to_cache_path
 
 from time import (
     gmtime,
@@ -353,18 +356,20 @@ class TitleDBViews:
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
             cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).first()
+            url = cia.url
             if cia:
                 if cia.path:
                     # Verify cache file is there and valid.
-                    verify_cache()
-
-                    return FileResponse(
-                               'cache/'+ parse.quote_plus(cia.url) +'/'+cia.path,
-                               request=request,
-                               content_type='application/x-3ds-archive'
-                           )
+                    if verify_cache(cia):
+                        return FileResponse(
+                                   os.path.join(url_to_cache_path(url.url, '/var/cache/titledb'), 'archive_root', cia.path),
+                                   request=request,
+                                   content_type='application/x-3ds-archive'
+                               )
+                    else:
+                        return HTTPNotFound()
                 else:
-                    return HTTPFound(location=cia.url)
+                    return HTTPFound(location=url.url)
         return dict(error='TitleID not found.')
 
     @view_config(route_name='time_v1')
