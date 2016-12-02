@@ -1,27 +1,26 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <!--
 
 3DS Homebrew Title Database
 
-API: http://192.168.42.20:6543/v0/
+API: https://dev.titledb.com/v0/
 
 Interface accepts json via POST, and provides simplified
-interaction with GET. Multiple commands may be combined as a list. 
+interaction with GET. Multiple commands may be combined as a list.
 
 You must provide a User-Agent header with your request
 (e.g. httpcAddRequestHeaderField(&context, (char*)"User-Agent", (char*)"Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 YourAppName/1.4.13"); )
 Please try to make it unique to your application.
 
-Consider the current (v0) API implementation to be unstable, it may change 
+Consider the current (v0) API implementation to be unstable, it may change
 without notice until the primary features are fully implemented.
 
-If you use this your project, please include a mention including the website name, 
+If you use this your project, please include a mention including the website name,
 stylized as TitleDB.com or link back to the main website, whichever is applicable.
 
 Contact me on reddit as /u/codepoet82 or ken(a)intherack.com if you have any
-questions, or would like to help somehow. Particularly, assistance from 
+questions, or would like to help somehow. Particularly, assistance from
 someone who knows JS/HTML/CSS is desperately needed!
 
 
@@ -31,9 +30,9 @@ The default GET is equivelent to a POST of:
 { "action": "list", "fields": ["name", "description", "author", "titleid", "url"] }
 
 Some example GET commands are:
-http://192.168.42.20:6543/v0/redirect/<TITLEID> will auto-redirect to the current url for the requested title ID.
-http://192.168.42.20:6543/v0/proxy/<TITLEID> will either redirect or proxy-extract from an archive as required.
-https://api.titledb.com/images/<TITLEID>.png will provide the 'icon_large' field decoded and converted to a .png
+https://dev.titledb.com/v0/redirect/<TITLEID> will auto-redirect to the current url for the requested title ID.
+https://dev.titledb.com/v0/proxy/<TITLEID> will either redirect or proxy-extract from an archive as required.
+https://dev.titledb.com/images/<TITLEID>.png will provide the 'icon_large' field decoded and converted to a .png
 
 
 Some example JSON commands that can be used are:
@@ -51,12 +50,13 @@ Web UI originally based on 'that titlekeys site'.
 
 -->
 <head>
+    <base href="https://titledb.com/" target="_blank">
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>3DS Homebrew Title Database</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    <link rel="stylesheet" href="old-css/bootstrapValidator.min.css">
+    <link rel="stylesheet" href="/css/bootstrapValidator.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.11/css/dataTables.bootstrap.min.css">
     <!--[if lt IE 9]>
@@ -67,6 +67,18 @@ Web UI originally based on 'that titlekeys site'.
     <style>
         td.monospace-text {
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+        }
+
+        td {
+            max-width: 25vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        td:first-child > img {
+            width: 48px;
+            height: 48px;
         }
     </style>
 </head>
@@ -79,19 +91,20 @@ Web UI originally based on 'that titlekeys site'.
 
     <h3>Add a new title</h3>
     <div class="col-sm-12">
-        <form id="urlForm" class="form-horizontal" method="post" action="http://192.168.42.20:6543/v0/">
+        <form id="urlForm" class="form-horizontal" method="post" action="https://dev.titledb.com/v0/">
             <div class="form-group-lg">
                 <label class="col-sm-2 control-label" for="url">CIA or Archive URL:</label>
                 <div class="col-sm-10">
-                    <input type="hidden" name="action" value="add">
-                    <input name="url" type="url" class="form-control" id="url" size="20" maxlength="4096" placeholder="http://example.com/installable.cia or http://example.com/archive.zip">
-                </div>
-                <div class="col-sm-offset-2 col-sm-10">
-                    <button type="submit" class="btn btn-lg btn-success">Send</button>
+                    <div class="input-group">
+                        <input type="hidden" name="action" value="add">
+                        <input name="url" type="url" class="form-control" id="url" size="20" maxlength="4096" placeholder="http://example.com/installable.cia or http://example.com/archive.zip">
+                        <span class="input-group-btn">
+                            <button type="submit" class="btn btn-lg btn-success">Send</button>
+                        </span>
+                    </div>
                 </div>
             </div>
         </form>
-
    </div>
 
     <h2>Titles</h2>
@@ -119,7 +132,7 @@ Web UI originally based on 'that titlekeys site'.
             <th>URL</th>
         </tr></tfoot>
     </table>
-All extracted graphics, logos, and trademarks are property of their respective owners.
+    <p style="text-align:center">All extracted graphics, logos, and trademarks are property of their respective owners.</p>
 </div>
 
 
@@ -139,25 +152,26 @@ All extracted graphics, logos, and trademarks are property of their respective o
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
-<script src="old-js/bootstrapValidator.min.js"></script>
+<script src="/js/bootstrapValidator.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.2/toastr.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.11/js/jquery.dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.11/js/dataTables.bootstrap.min.js"></script>
-<script src="old-js/filesize.min.js"></script>
+<script src="js/filesize.min.js"></script>
 <script type="text/javascript">
 
     $(function() {
         var dataTable = $("table").DataTable({
             dom: "<'row'<'filters col-sm-6'l><'col-sm-6'f>" +
-            "<'row'<'col-sm-12'tr>>" +
-            "<'row'<'col-sm-5'i><'col-sm-7'p>>",
+            "<'container-fluid'tr>" +
+            "<'container-fluid'i><'container-fluid'p>>",
             "ajax": {
-                "url": "/v0/",
+                "url": "https://dev.titledb.com/v0/",
                 "dataSrc": ""
             },
             "order": [[ 1, "asc" ]],
             "pageLength": 25,
+            "autoWidth": false,
             "columns": [
                 {
                     targets: -1,
@@ -165,11 +179,11 @@ All extracted graphics, logos, and trademarks are property of their respective o
                     "defaultContent": "",
                     render : function(data, type, row, meta) {
                         if (type === 'display') {
-                            return '<img src="/v0/images/'+row.titleid+'.png">';
+                            return '<img src="//dev.titledb.com/images/'+row.titleid+'.png">';
                         }
                     }
                 },
-		{ "data" : "name" },
+        { "data" : "name" },
                 { "data" : "description" },
                 { "data" : "author" },
                 {
@@ -186,7 +200,7 @@ All extracted graphics, logos, and trademarks are property of their respective o
                         return data;
                     }
                 },
-		{
+        {
                     "data" : "url",
                     render : function(data, type, row, meta) {
                         if (type === 'display' && data != null) {
@@ -220,7 +234,7 @@ All extracted graphics, logos, and trademarks are property of their respective o
 
             $("#qrcode").empty().qrcode({
                 //text: $.trim($(this).parent().text()),
-		text: 'http://192.168.42.20:6543/v0/proxy/' + $.trim(row.eq(4).text()),
+        text: 'https://dev.titledb.com/v0/proxy/' + $.trim(row.eq(4).text()),
                 width: 500,
                 height: 500
             });
@@ -228,21 +242,21 @@ All extracted graphics, logos, and trademarks are property of their respective o
             $("#qrModal").modal('show');
         });
 
-	$.fn.serializeObject = function () {
-		var o = {};
-		var a = this.serializeArray();
-		$.each(a, function () {
-			if (o[this.name] !== undefined) {
-				if (!o[this.name].push) {
-					o[this.name] = [o[this.name]];
-				}
-				o[this.name].push(this.value || '');
-			} else {
-				o[this.name] = this.value || '';
-			}
-		});
-		return o;
-	};
+    $.fn.serializeObject = function () {
+        var o = {};
+        var a = this.serializeArray();
+        $.each(a, function () {
+            if (o[this.name] !== undefined) {
+                if (!o[this.name].push) {
+                    o[this.name] = [o[this.name]];
+                }
+                o[this.name].push(this.value || '');
+            } else {
+                o[this.name] = this.value || '';
+            }
+        });
+        return o;
+    };
 
         $('#urlForm')
                 .bootstrapValidator({
@@ -281,10 +295,10 @@ All extracted graphics, logos, and trademarks are property of their respective o
                     // Use Ajax to submit form data
                     $.post($form.attr('action'), JSON.stringify($form.serializeObject()), function(result) {
                         console.log(result);
-                        if (result.error) {
-                            toastr.warning(result.error, "Submission Error");
+                        if (!result.status) {
+                            toastr.warning("Submission Failed");
                         } else {
-                            toastr.success("Found " + result.name, "Submission Success");
+                            toastr.success(result.status, "Submission Success");
                         }
                     }, 'json');
                 });
@@ -292,4 +306,3 @@ All extracted graphics, logos, and trademarks are property of their respective o
 </script>
 </body>
 </html>
-

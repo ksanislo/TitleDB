@@ -1,6 +1,7 @@
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
+from pyramid.events import NewRequest
 
 from sqlalchemy import engine_from_config
 
@@ -13,6 +14,17 @@ from .jsonhelper import custom_json_renderer
 import logging
 log = logging.getLogger(__name__)
 
+def add_cors_headers_response_callback(event):
+    def cors_headers(request, response):
+        response.headers.update({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS',
+        'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Max-Age': '1728000',
+        })
+    event.request.add_response_callback(cors_headers)
+
 def main(global_config, **settings):
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -21,6 +33,8 @@ def main(global_config, **settings):
     config = Configurator(settings=settings,
                           root_factory='.resources.Root')
     config.include('pyramid_chameleon')
+
+    config.add_subscriber(add_cors_headers_response_callback, NewRequest)
 
     config.add_renderer('json', custom_json_renderer())
 

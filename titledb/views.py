@@ -1,6 +1,8 @@
 import logging
 log = logging.getLogger(__name__)
 
+import json
+
 from datetime import datetime
 
 from pyramid.httpexceptions import HTTPFound
@@ -265,8 +267,18 @@ class TitleDBViews:
 
         return(results)
 
-    @view_config(route_name='cia_collection_v0', renderer='json')
+    @view_config(route_name='cia_collection_v0') #, renderer='json')
     def legacy_list_v0(self):
+        if self.request.method == 'POST':
+            mydata = json.loads(self.request.body.decode("utf-8"))
+            if 'action' in mydata and mydata['action'] == 'add' and 'url' in mydata:
+                submission = Submission(active=1)
+                submission.url = mydata['url']
+                submission.status = 'Waiting for URL processing daemon to become ready.'
+                DBSession.add(submission)
+                DBSession.flush()
+                self.request.render_schema = SubmissionSchema()
+                return submission
         data = DBSession.query(CIA_v0).filter_by(active=True).all()
         self.request.render_schema = CIASchema_v0(many=True)
         return data
