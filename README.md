@@ -16,7 +16,7 @@ File object collections (these will generally will be filled by the scan/import 
 /v1/arm9  
 
 Special object collections (File object, but with editable "mapping" script that moderators will need to provide/edit):  
-/assets  
+/v1/assets  
 
 When a collection is called with a GET, the collection will return a list of all items where the 'active' field is set to True, as such you can make a new entry, just by POSTing the json { "active": True } to a collection URL, though it's more useful to post the full json object for what you wish to create at once. Some fields like 'id' can't be changed or specified, but you will get your new object with it defined in the result.
 
