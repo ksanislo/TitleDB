@@ -30,7 +30,7 @@ Proxy extraction is also undecided, I'm thinking that i'll implement as /v1/{fil
 
 Nesting is selectable on/off for both collections and record, just by adding a url parameter of nested=true or nested=false to the URL. The current defaults are a good starting option though, as apps and interfaces will generally want to just pull down everything as collections, which gives the un-nested view, and a pull on a single object will show all related information, avoiding the need for additional requests. It does make editing a bit strange however, as your GET returns a nested view, but you still have to PUT/POST with the *_id values.
 
-You can also filter results with any number of exclude=${field} or only=${field} to control the display of information. If you require filtering for a sub-level of a nested hierarchy, you will need to specify it in dot-notation based on the type. Some not particularly useful examples would be:  
+You can also filter results with any number of exclude=${field} or only=${field} to control the display of information. If you require filtering for a sub-level of a nested hierarchy, you will need to specify it in dot-notation based on the type. Be aware, if you adjust filtering, it will override some of the nested filter defaults, and you may need to exclude additional data that you don't need. Please check your URLs manually to ensure they work as you have expected. Some not particularly useful examples would be:  
 https://dev.titledb.com/v1/url?only=url  
 or  
 https://dev.titledb.com/v1/entry?nested=true&exclude=cia.icon_l&exclude=cia.icon_s&exclude=tdsx.smdh.icon_l&exclude=tdsx.smdh.icon_s  
