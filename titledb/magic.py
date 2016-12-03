@@ -94,162 +94,175 @@ def download_to_filename(r, filename):
         return(calculated_size, h.hexdigest())
 
 def process_url(url_string=None, url_id=None, cache_root=''):
-    with transaction.manager:
-        if url_string:
-            url_string = url_string.split('#')[0]    # Remove any # target from the URL
-            item = DBSession.query(URL).filter_by(url=url_string).first()
-            if not item:
-                item = URL(url=url_string)
-        elif url_id:
-            item = DBSession.query(URL).get(url_id)
-            if not item:
-                return None
-        else:
+    DBSession.begin_nested()
+    if url_string:
+        url_string = url_string.split('#')[0]    # Remove any # target from the URL
+        item = DBSession.query(URL).filter_by(url=url_string).first()
+        if not item:
+            item = URL(url=url_string)
+    elif url_id:
+        item = DBSession.query(URL).get(url_id)
+        if not item:
             return None
+    else:
+        return None
 
-        headers = dict()
-        headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
+    headers = dict()
+    headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
 
-        cache_path = url_to_cache_path(item.url, cache_root)
+    cache_path = url_to_cache_path(item.url, cache_root)
 
-        if item.filename and item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path, item.filename)):
-            if item.etag:
-                headers['If-None-Match'] = '"' + item.etag + '"'
-            elif item.mtime:
-                headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    if item.filename and item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path, item.filename)):
+        if item.etag:
+            headers['If-None-Match'] = '"' + item.etag + '"'
+        elif item.mtime:
+            headers['If-Modified-Since'] = item.mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
 
-        try:
-            r = requests.get(item.url, stream=True, headers=headers)
-        except requests.exceptions.RequestException:
-            return None
+    try:
+        r = requests.get(item.url, stream=True, headers=headers)
+    except requests.exceptions.RequestException:
+        return None
 
 	# GitHub release "archive" fail to properly report as 304, but we can fake it.
-        if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag'] \
-            and ('If-None-Match' in headers or 'If-Modified-Since' in headers):
-            r.status_code = 304
+    if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag'] \
+        and ('If-None-Match' in headers or 'If-Modified-Since' in headers):
+        r.status_code = 304
 
-        #subitems = []
-        results = None
-        if r.status_code == 200:
-            item.version = find_version_in_string(item.url)
+    #subitems = []
+    results = None
+    if r.status_code == 200:
+        item.version = find_version_in_string(item.url)
 
-            if not os.path.isdir(cache_path):
-                os.makedirs(cache_path)
+        if not os.path.isdir(cache_path):
+            os.makedirs(cache_path)
 
-            if 'etag' in r.headers:
-                item.etag = r.headers['etag'].strip('"')
+        if 'etag' in r.headers:
+            item.etag = r.headers['etag'].strip('"')
 
-            if 'last-modified' in r.headers:
-                item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %H:%M:%S %Z')
+        if 'last-modified' in r.headers:
+            item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %H:%M:%S %Z')
 
-            if 'content-disposition' in r.headers:
-                #import pdb; pdb.set_trace()
-                #item.filename = r.headers['content-disposition'].partition('filename=')[2].strip('"').split('/')[-1]
-                re_result = re.search('(?<=filename=")[^"]+', r.headers['content-disposition'])
-                if not re_result:
-                   re_result = re.search('(?<=filename=).+', r.headers['content-disposition'])
-                if re_result:
-                    item.filename = re_result.group(0)
-                else:
-                    raise
+        if 'content-disposition' in r.headers:
+            #import pdb; pdb.set_trace()
+            #item.filename = r.headers['content-disposition'].partition('filename=')[2].strip('"').split('/')[-1]
+            re_result = re.search('(?<=filename=")[^"]+', r.headers['content-disposition'])
+            if not re_result:
+               re_result = re.search('(?<=filename=).+', r.headers['content-disposition'])
+            if re_result:
+                item.filename = re_result.group(0)
             else:
-                item.filename = item.url.split('/')[-1].split('?')[0]
+                raise
+        else:
+            item.filename = item.url.split('/')[-1].split('?')[0]
 
-            if 'content-type' in r.headers:
-                item.content_type = determine_mimetype(os.path.join(cache_path, item.filename), r.headers['content-type'])
-            else:
-                item.content_type = determine_mimetype(os.path.join(cache_path, item.filename))
+        if 'content-type' in r.headers:
+            item.content_type = determine_mimetype(os.path.join(cache_path, item.filename), r.headers['content-type'])
+        else:
+            item.content_type = determine_mimetype(os.path.join(cache_path, item.filename))
 
-            (item.size, item.sha256) = download_to_filename(r, os.path.join(cache_path, item.filename))
+        (item.size, item.sha256) = download_to_filename(r, os.path.join(cache_path, item.filename))
 
-            if not item.size or not item.sha256:
-                None # TODO: Errors happened during download.
+        if not item.size or not item.sha256:
+            None # TODO: Errors happened during download.
 
-            switcher = {
-                'application/rar': process_rar_archive,
+        switcher = {
+            'application/rar': process_rar_archive,
 
-                'application/x-3ds-archive': process_cia,
-                'application/x-3ds-homebrew': process_tdsx,
-                'application/x-3ds-iconfile': process_smdh,
-                'application/x-3ds-arm9bin': process_arm9,
-                'application/x-3ds-xml': process_xml
-            }
-            action = switcher.get(item.content_type, process_archive)
-            if action:
-                relatives = find_item_relatives(item)
-                results = action(item, relatives, cache_path)
-                if results:
-                    item.active = True
-            else:
-                item.active = False
-
-        elif r.status_code == 304:
-            #item.active = True
-            None
-
+            'application/x-3ds-archive': process_cia,
+            'application/x-3ds-homebrew': process_tdsx,
+            'application/x-3ds-iconfile': process_smdh,
+            'application/x-3ds-arm9bin': process_arm9,
+            'application/x-3ds-xml': process_xml
+        }
+        action = switcher.get(item.content_type, process_archive)
+        if action:
+            relatives = find_item_relatives(item)
+            results = action(item, relatives, cache_path)
+            if results:
+                item.active = True
         else:
             item.active = False
 
-        # Realize self
-        if not item.id:
-            if item.active:
-                DBSession.add(item)
-                DBSession.flush()
-            else:
-                DBSession.rollback()
-                return(None)
+    elif r.status_code == 304:
+        #item.active = True
+        None
 
-        if results:
-            if not isinstance(results, collections.Iterable):
-                results = [results]
-                results.extend(find_nonarchive_results(item))
+    else:
+        item.active = False
 
-            # Make sure everything new gets a url_id before anything else
-            for result_item in results:
-                if not result_item.url_id:
-                    result_item.url_id = item.id
+    # Realize self
+    #if not item.id:
+    #    if item.active:
+    #        DBSession.add(item)
+    #        DBSession.flush()
+    #    else:
+    #        DBSession.rollback()
+    #        return(None)
 
-            # Find any existing entry_id if we have one
-            use_entry_id = None
-            for result_item in results:
-                if 'entry_id' in dir(result_item) and result_item.entry_id:
-                    use_entry_id = result_item.entry_id
-                    break
+    if results:
+        if not isinstance(results, collections.Iterable):
+            results = [results]
+            results.extend(find_nonarchive_results(item))
 
-            for result_item in results:
-                if not use_entry_id and result_item.__class__ in (SMDH, CIA):
-                    new_entry = Entry(active=1,
-                                      name=result_item.name_s,
-                                      author=result_item.publisher, 
-                                      headline=result_item.name_l)
-                    DBSession.add(new_entry)
-                    DBSession.flush()
-                    use_entry_id = new_entry.id
-                    break
+        # Make sure everything new gets a url_id before anything else
+        #for result_item in results:
+        #    if not result_item.url_id:
+        #        result_item.url_id = item.id
 
-            # Loop over all result items and set avaliable info, realise in the DB if they're new.
-            for result_item in results:
-                if not result_item.id and result_item.active:
-                    DBSession.add(result_item)
-                    DBSession.flush()
+        for result_item in results:
+            if not result_item.url:
+                result_item.url = item
 
-            # Once more over everything, now that we have valid ids for everything.
-            for result_item in results:
-                if use_entry_id and 'entry_id' in dir(result_item) and not result_item.entry_id:
-                    result_item.entry_id = use_entry_id
+        # Find any existing entry_id if we have one
+        #use_entry_id = None
+        #for result_item in results:
+        #    if 'entry_id' in dir(result_item) and result_item.entry_id:
+        #        use_entry_id = result_item.entry_id
+        #        break
 
-                # Match up any xml or smdh files in the same folder as our 3dsx.
-                if result_item.__class__ == TDSX:
-                    for check_item in results:
-                        if check_siblings(check_item, result_item):
-                            exec('result_item.'+check_item.__class__.__name__.lower()+'_id = check_item.id')
+        our_entry = None
+        for result_item in results + relatives:
+            #import pdb; pdb.set_trace()
+            if 'entry' in dir(result_item) and result_item.entry:
+                our_entry = result_item.entry
+                break
 
-                if not result_item.id and result_item.active:
-                    DBSession.add(result_item)
-                    DBSession.flush()
+        for result_item in results:
+            #if not use_entry_id and result_item.__class__ in (SMDH, CIA):
+            if not our_entry and result_item.__class__ in (SMDH, CIA):
+                our_entry = Entry(active=1,
+                                  name=result_item.name_s,
+                                  author=result_item.publisher, 
+                                  headline=result_item.name_l)
+                #DBSession.add(our_entry)
+                #DBSession.flush()
+                break
 
-        DBSession.flush()
-        return URLSchema().dump(item).data
+        # Loop over all result items and set avaliable info, realise in the DB if they're new.
+        #for result_item in results:
+        #    if not result_item.id and result_item.active:
+        #        DBSession.add(result_item)
+        #        DBSession.flush()
+
+        # Once more over everything, now that we have valid ids for everything.
+        for result_item in results:
+            #if use_entry_id and 'entry_id' in dir(result_item) and not result_item.entry_id:
+            #    result_item.entry_id = use_entry_id
+            if our_entry and 'entry' in dir(result_item) and not result_item.entry:
+                result_item.entry = our_entry
+
+            # Match up any xml or smdh files in the same folder as our 3dsx.
+            if result_item.__class__ == TDSX:
+                for check_item in results:
+                    if check_siblings(check_item, result_item):
+                        #exec('result_item.'+check_item.__class__.__name__.lower()+'_id = check_item.id')
+                        exec('result_item.'+check_item.__class__.__name__.lower()+' = check_item')
+
+            if not result_item.id and result_item.active:
+                DBSession.add(result_item)
+
+    DBSession.flush()
+    return URLSchema().dump(item).data
 
 def find_nonarchive_results(item):
     results = list()
@@ -273,8 +286,10 @@ def check_siblings(first, second):
         return(True)
 
     if not first.path and not second.path:
-        first_url = DBSession.query(URL).get(first.url_id)
-        second_url = DBSession.query(URL).get(second.url_id)
+        #first_url = DBSession.query(URL).get(first.url_id)
+        #second_url = DBSession.query(URL).get(second.url_id)
+        first_url = first.url
+        second_url = second.url
         first_identifier = first_url.url.replace(first_url.filename, '') + '.'.join(first_url.filename.split('.')[:-1])
         second_identifier = second_url.url.replace(second_url.filename, '') + '.'.join(second_url.filename.split('.')[:-1])
         if first_identifier == second_identifier:
@@ -286,16 +301,17 @@ def find_item_relatives(item):
     previous_item = DBSession.query(URL).filter(URL.url.like(item.url.replace(str(item.version),'%'))).order_by(URL.created_at.desc()).first()
     relatives = list()
     for item_cls in (CIA, TDSX, ARM9):
-        new_items = DBSession.query(item_cls).filter(item_cls.url_id == item.id).all()
+        #import pdb; pdb.set_trace()
+        new_items = DBSession.query(item_cls).filter(item_cls.url == previous_item).all()
         relatives.extend(new_items)
     return(relatives)
 
 def process_archive(parent, relatives, cache_path):
     filename = os.path.join(cache_path, parent.filename)
-    if parent.__class__ == URL:
-        url_id = parent.id
-    else:
-        url_id = parent.url_id
+    #if parent.__class__ == URL:
+    #    url_id = parent.id
+    #else:
+    #    url_id = parent.url_id
 
     results = list()
     try:
@@ -327,10 +343,10 @@ def process_archive(parent, relatives, cache_path):
 
 def process_rar_archive(parent, relatives, cache_path):
     filename = os.path.join(cache_path, parent.filename)
-    if parent.__class__ == URL:
-        url_id = parent.id
-    else:
-        url_id = parent.url_id
+    #if parent.__class__ == URL:
+    #    url_id = parent.id
+    #else:
+    #    url_id = parent.url_id
 
     results = list()
     try:
@@ -408,12 +424,19 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
     else:
         filename = os.path.join(cache_path, parent.filename)
 
+    #import pdb; pdb.set_trace()
+
     # FIXME: This should find parent URL by url string, not id.
     if parent.__class__ == URL:
-        url_id = parent.id
+        url = parent
     else:
-        url_id = parent.url_id
-    item = DBSession.query(cls).filter_by(url_id=url_id, path=archive_path).first()
+        url = parent.url
+
+    if url.id:
+        item = DBSession.query(cls).filter_by(url_id=url_id, path=archive_path).first()
+    else:
+        item = None
+
     if not item:
         item = cls(active=False)
 
@@ -429,6 +452,7 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
 
         relative_entry_ids = []
         relative_assets_ids = []
+
         for relative in relatives:
             if relative.entry_id:
                 relative_entry_ids.append(relative.entry_id)
@@ -436,8 +460,10 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
             if relative.assets_id:
                 relative_assets_ids.appent(relative.assets_id)
 
+            import pdb; pdb.set_trace()
+
             # Try to find an exact match for this file in our relatives.
-            if relative.__class__ == item.__class__ and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
+            if relative.__class__ == item.__class__ and relative.path and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
                 item.entry_id = relative.entry_id
                 item.assets_id = relative.assets_id
 
