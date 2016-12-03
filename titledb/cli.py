@@ -47,7 +47,7 @@ def main(argv=sys.argv):
     #if len(argv) != 2:
     #    usage(argv)
     #config_uri = argv[1]
-    config_uri = "/home/ken/git/TitleDB/development.ini"
+    config_uri = "development.ini"
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
