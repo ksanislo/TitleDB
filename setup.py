@@ -12,6 +12,8 @@ requires = [
     'pillow',
     'bcrypt',
     'waitress',
+    'rarfile',
+    'libarchive',
     'zope.sqlalchemy'
 ]
 
