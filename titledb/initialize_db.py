@@ -43,7 +43,7 @@ def main(argv=sys.argv):
     with transaction.manager:
         userpass = json.load(open("private/userpass.json"))
         for username in userpass:
-            usermodel = User(name=username, password=hash_password(userpass[username]), active=True)
+            usermodel = User(name=username, password=userpass[username], active=True)
             DBSession.add(usermodel)
 
             user = DBSession.query(User).filter_by(name=username).one()
