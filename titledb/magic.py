@@ -144,7 +144,6 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             item.mtime = datetime.strptime(r.headers['last-modified'], '%a, %d %b %Y %H:%M:%S %Z')
 
         if 'content-disposition' in r.headers:
-            #import pdb; pdb.set_trace()
             re_result = re.search('(?<=filename=")[^"]+', r.headers['content-disposition'])
             if not re_result:
                re_result = re.search('(?<=filename=).+', r.headers['content-disposition'])
@@ -197,7 +196,6 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
         our_entry = None
         for result_item in results + relatives:
-            #import pdb; pdb.set_trace()
             if 'entry' in dir(result_item) and result_item.entry:
                 our_entry = result_item.entry
                 break
@@ -262,7 +260,6 @@ def find_item_relatives(item):
     previous_item = DBSession.query(URL).filter(URL.url.like(item.url.replace(str(item.version),'%'))).order_by(URL.created_at.desc()).first()
     relatives = list()
     for item_cls in (CIA, TDSX, ARM9):
-        #import pdb; pdb.set_trace()
         new_items = DBSession.query(item_cls).filter(item_cls.url == previous_item).all()
         relatives.extend(new_items)
     return(relatives)
@@ -377,8 +374,6 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
     else:
         filename = os.path.join(cache_path, parent.filename)
 
-    #import pdb; pdb.set_trace()
-
     # FIXME: This should find parent URL by url string, not id.
     if parent.__class__ == URL:
         url = parent
@@ -416,8 +411,6 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
 
             if relative.assets_id:
                 relative_assets_ids.appent(relative.assets_id)
-
-            #import pdb; pdb.set_trace()
 
             # Try to find an exact match for this file in our relatives.
             if relative.__class__ == item.__class__ and relative.path and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
