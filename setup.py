@@ -10,6 +10,7 @@ requires = [
     'pyramid_tm',
     'pillow',
     'bcrypt',
+    'waitress',
     'zope.sqlalchemy'
 ]
 
