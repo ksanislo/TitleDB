@@ -199,7 +199,7 @@ class CIASchema_v0(RenderSchema):
     description = fields.String(dump_only=True)
     author = fields.String(dump_only=True)
     size = fields.Integer(dump_only=True)
-    mtime = fields.Function(lambda obj: int(obj.mtime.strftime('%s')), dump_only=True)
+    mtime = fields.Function(lambda obj: int(obj.mtime.strftime('%s')) if obj.mtime else 0, dump_only=True)
     url = fields.Nested('URLSchemaNested', many=False, only='url')
     create_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)
     update_time = fields.DateTime(format='%Y-%m-%d %H:%M:%S', dump_only=True)

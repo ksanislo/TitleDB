@@ -74,6 +74,7 @@ def determine_mimetype(filename, content_type=None):
 def url_to_cache_path(string, cache_root):
     url_hash = hashlib.sha256(string.encode('utf-8')).hexdigest()
     cache_path = os.path.join(cache_root, url_hash[0:3], url_hash[3:6], url_hash[6:])
+    print(cache_path)
     return(cache_path)
 
 def download_to_filename(r, filename):
@@ -144,7 +145,6 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
         if 'content-disposition' in r.headers:
             #import pdb; pdb.set_trace()
-            #item.filename = r.headers['content-disposition'].partition('filename=')[2].strip('"').split('/')[-1]
             re_result = re.search('(?<=filename=")[^"]+', r.headers['content-disposition'])
             if not re_result:
                re_result = re.search('(?<=filename=).+', r.headers['content-disposition'])
@@ -183,42 +183,17 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         else:
             item.active = False
 
-    elif r.status_code == 304:
-        #item.active = True
-        None
-
-    else:
+    elif not r.status_code == 304:
         item.active = False
-
-    # Realize self
-    #if not item.id:
-    #    if item.active:
-    #        DBSession.add(item)
-    #        DBSession.flush()
-    #    else:
-    #        DBSession.rollback()
-    #        return(None)
 
     if results:
         if not isinstance(results, collections.Iterable):
             results = [results]
             results.extend(find_nonarchive_results(item))
 
-        # Make sure everything new gets a url_id before anything else
-        #for result_item in results:
-        #    if not result_item.url_id:
-        #        result_item.url_id = item.id
-
         for result_item in results:
             if not result_item.url:
                 result_item.url = item
-
-        # Find any existing entry_id if we have one
-        #use_entry_id = None
-        #for result_item in results:
-        #    if 'entry_id' in dir(result_item) and result_item.entry_id:
-        #        use_entry_id = result_item.entry_id
-        #        break
 
         our_entry = None
         for result_item in results + relatives:
@@ -228,26 +203,15 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 break
 
         for result_item in results:
-            #if not use_entry_id and result_item.__class__ in (SMDH, CIA):
             if not our_entry and result_item.__class__ in (SMDH, CIA):
                 our_entry = Entry(active=1,
                                   name=result_item.name_s,
                                   author=result_item.publisher, 
                                   headline=result_item.name_l)
-                #DBSession.add(our_entry)
-                #DBSession.flush()
                 break
-
-        # Loop over all result items and set avaliable info, realise in the DB if they're new.
-        #for result_item in results:
-        #    if not result_item.id and result_item.active:
-        #        DBSession.add(result_item)
-        #        DBSession.flush()
 
         # Once more over everything, now that we have valid ids for everything.
         for result_item in results:
-            #if use_entry_id and 'entry_id' in dir(result_item) and not result_item.entry_id:
-            #    result_item.entry_id = use_entry_id
             if our_entry and 'entry' in dir(result_item) and not result_item.entry:
                 result_item.entry = our_entry
 
@@ -255,7 +219,6 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             if result_item.__class__ == TDSX:
                 for check_item in results:
                     if check_siblings(check_item, result_item):
-                        #exec('result_item.'+check_item.__class__.__name__.lower()+'_id = check_item.id')
                         exec('result_item.'+check_item.__class__.__name__.lower()+' = check_item')
 
             if not result_item.id and result_item.active:
@@ -286,8 +249,6 @@ def check_siblings(first, second):
         return(True)
 
     if not first.path and not second.path:
-        #first_url = DBSession.query(URL).get(first.url_id)
-        #second_url = DBSession.query(URL).get(second.url_id)
         first_url = first.url
         second_url = second.url
         first_identifier = first_url.url.replace(first_url.filename, '') + '.'.join(first_url.filename.split('.')[:-1])
@@ -308,10 +269,6 @@ def find_item_relatives(item):
 
 def process_archive(parent, relatives, cache_path):
     filename = os.path.join(cache_path, parent.filename)
-    #if parent.__class__ == URL:
-    #    url_id = parent.id
-    #else:
-    #    url_id = parent.url_id
 
     results = list()
     try:
@@ -343,10 +300,6 @@ def process_archive(parent, relatives, cache_path):
 
 def process_rar_archive(parent, relatives, cache_path):
     filename = os.path.join(cache_path, parent.filename)
-    #if parent.__class__ == URL:
-    #    url_id = parent.id
-    #else:
-    #    url_id = parent.url_id
 
     results = list()
     try:
@@ -433,17 +386,21 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
         url = parent.url
 
     if url.id:
-        item = DBSession.query(cls).filter_by(url_id=url_id, path=archive_path).first()
+        item = DBSession.query(cls).filter_by(url_id=url.id, path=archive_path).first()
     else:
         item = None
 
     if not item:
         item = cls(active=False)
 
+    if archive_path:
+        item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+    else:
+        item.mtime = parent.mtime
+
     item.path = archive_path
     item.version = parent.version
     item.size = os.path.getsize(filename)
-    item.mtime = datetime.fromtimestamp(os.path.getmtime(filename))
     item.sha256 = checksum_sha256(filename)
 
     if relatives:

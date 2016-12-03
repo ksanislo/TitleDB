@@ -15,6 +15,7 @@ from pyramid.paster import (
 )
 
 from .cron import process_submission_queue
+from .github import github_full_scan
 from .magic import process_url, find_version_in_string
 
 from .models import (
@@ -39,6 +40,9 @@ def action_add(settings, url):
     
 def action_cron(settings, args):
     process_submission_queue(cache_root=settings['titledb.cache'])
+
+def action_github(settings, args):
+    github_full_scan(cache_root=settings['titledb.cache'])
 
 def action_none(settings, url):
     print(find_version_in_string(url))
@@ -72,6 +76,7 @@ def main(argv=sys.argv):
     switcher = {
         'add': action_add,
         'cron': action_cron,
+        'github': action_github,
         'none': action_none
     }
     action = switcher.get(choice, action_none)
