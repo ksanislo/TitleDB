@@ -3,6 +3,7 @@ from setuptools import setup
 requires = [
     'pyramid',
     'pyramid_chameleon',
+    'pyramid_debugtoolbar',
     'numpy',
     'marshmallow',
     'deform',
