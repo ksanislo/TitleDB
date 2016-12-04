@@ -43,15 +43,3 @@ There's also a /v1/time object which will return the current time in ISO8601 for
 
 Feel free to play around with the dev preview and try it all out. The database may get blown away here or there while I'm working with it though, as right now dev is being served by a reverse proxy pointed at my local development environment at home. I'll switch this out to a proper uWSGI deployment on a hosted server in the near future, and set it up with hooks to track the GitHub repository as commits are published instead.
 
-
-For example, here is entry #58, and it's associated components with nesting disabled for clarity:  
-https://dev.titledb.com/v1/entry/58?nested=false  
-https://dev.titledb.com/v1/url/58?nested=false  
-https://dev.titledb.com/v1/cia/84?nested=false  
-https://dev.titledb.com/v1/tdsx/38?nested=false  
-https://dev.titledb.com/v1/smdh/31?nested=false  
-https://dev.titledb.com/v1/xml/9?nested=false  
-
-
-And here's entry #166 with nesting (notable for having 3dsx/smdh and arm9):  
-https://dev.titledb.com/v1/entry/166  
