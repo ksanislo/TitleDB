@@ -282,9 +282,15 @@ class TitleDBViews:
                 DBSession.flush()
                 self.request.render_schema = SubmissionSchema()
                 return submission
-        data = DBSession.query(CIA_v0).filter_by(active=True).all()
+        data = DBSession.query(CIA_v0).filter_by(active=True).order_by(CIA.updated_at.desc()).all()
+        titleids = []
+        unique = []
+        for item in data:
+            if not item.titleid in titleids:
+                titleids.append(item.titleid)
+                unique.append(item)
         self.request.render_schema = CIASchema_v0(many=True)
-        return data
+        return unique
 
     @view_config(route_name='login_v1', renderer='login.pt')
     def login(self):

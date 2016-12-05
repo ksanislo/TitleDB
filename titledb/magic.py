@@ -66,7 +66,7 @@ def find_version_in_string(string):
 
 def determine_mimetype(filename, content_type=None):
     (mimetype, encoding) = mimetypes.guess_type(filename)    
-    if mimetype:
+    if not encoding and mimetype:
         return(mimetype)
     elif content_type:
         return(content_type)
