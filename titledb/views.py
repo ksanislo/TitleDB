@@ -361,7 +361,7 @@ class TitleDBViews:
         request = self.request
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
-            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).first()
+            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).order_by(CIA.updated_at.desc()).first()
             url = cia.url
             if cia:
                 if cia.path:
