@@ -4,7 +4,7 @@
 
 3DS Homebrew Title Database
 
-API: https://api.titledb.com/v0/
+API: https://dev.titledb.com/v0/
 
 Interface accepts json via POST, and provides simplified
 interaction with GET. Multiple commands may be combined as a list.
@@ -30,9 +30,9 @@ The default GET is equivelent to a POST of:
 { "action": "list", "fields": ["name", "description", "author", "titleid", "url"] }
 
 Some example GET commands are:
-https://api.titledb.com/v0/redirect/<TITLEID> will auto-redirect to the current url for the requested title ID.
-https://api.titledb.com/v0/proxy/<TITLEID> will either redirect or proxy-extract from an archive as required.
-https://api.titledb.com/images/<TITLEID>.png will provide the 'icon_large' field decoded and converted to a .png
+https://dev.titledb.com/v0/redirect/<TITLEID> will auto-redirect to the current url for the requested title ID.
+https://dev.titledb.com/v0/proxy/<TITLEID> will either redirect or proxy-extract from an archive as required.
+https://dev.titledb.com/images/<TITLEID>.png will provide the 'icon_large' field decoded and converted to a .png
 
 
 Some example JSON commands that can be used are:
@@ -93,7 +93,7 @@ Web UI originally based on 'that titlekeys site'.
 
     <h3>Add a new title</h3>
     <div class="col-sm-12">
-        <form id="urlForm" class="form-horizontal" method="post" action="https://api.titledb.com/v0/">
+        <form id="urlForm" class="form-horizontal" method="post" action="https://dev.titledb.com/v0/">
             <div class="form-group-lg">
                 <label class="col-sm-2 control-label" for="url">CIA or Archive URL:</label>
                 <div class="col-sm-10">
@@ -168,7 +168,7 @@ Web UI originally based on 'that titlekeys site'.
             "<'container-fluid'tr>" +
             "<'container-fluid'i><'container-fluid'p>>",
             "ajax": {
-                "url": "https://api.titledb.com/v0/",
+                "url": "https://dev.titledb.com/v0/",
                 "dataSrc": ""
             },
             "order": [[ 1, "asc" ]],
@@ -181,7 +181,7 @@ Web UI originally based on 'that titlekeys site'.
                     "defaultContent": "",
                     render : function(data, type, row, meta) {
                         if (type === 'display') {
-                            return '<img src="//api.titledb.com/images/'+row.titleid+'.png">';
+                            return '<img src="//dev.titledb.com/images/'+row.titleid+'.png">';
                         }
                     }
                 },
@@ -236,7 +236,7 @@ Web UI originally based on 'that titlekeys site'.
 
             $("#qrcode").empty().qrcode({
                 //text: $.trim($(this).parent().text()),
-        text: 'https://api.titledb.com/v0/proxy/' + $.trim(row.eq(4).text()),
+        text: 'https://dev.titledb.com/v0/proxy/' + $.trim(row.eq(4).text()),
                 width: 500,
                 height: 500
             });

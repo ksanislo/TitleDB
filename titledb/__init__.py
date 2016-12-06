@@ -62,7 +62,7 @@ def main(global_config, **settings):
 
     config.add_route('home', '/')
 
-    config.add_route('cia_collection_v0', '/v0/')
+    config.add_route('cia_collection_v0', '/v0{x:/?}')
     config.add_route('png_image_v0', '/{x:(v0/)?}images/{titleid:00040000[0-9A-Fa-f]{8}}.png')
     config.add_route('proxy_v0', '/v0/proxy/{titleid:00040000[0-9A-Fa-f]{8}}')
 
