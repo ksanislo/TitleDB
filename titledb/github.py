@@ -6,6 +6,7 @@ from .models import (
 
 import json
 import requests
+import transaction
 
 def github_full_scan(cache_root=None):
     url_like = 'https://github.com/%/releases/download/%'
@@ -32,7 +33,14 @@ def github_full_scan(cache_root=None):
         #import pdb; pdb.set_trace()
         if 'assets' in data:
             for asset in data['assets']:
-                process_url(asset['browser_download_url'], cache_root=cache_root)
+                try:
+                    with DBSession.begin_nested():
+                        process_url(asset['browser_download_url'], cache_root=cache_root)
+                except:
+                    transaction.rollback()
+                else:
+                    transaction.commit()
+
         else:
             print("Failure: "+github_api_url)
 

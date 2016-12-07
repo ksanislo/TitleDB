@@ -95,7 +95,6 @@ def download_to_filename(r, filename):
         return(calculated_size, h.hexdigest())
 
 def process_url(url_string=None, url_id=None, cache_root=''):
-    DBSession.begin_nested()
     if url_string:
         url_string = url_string.split('#')[0]    # Remove any # target from the URL
         item = DBSession.query(URL).filter_by(url=url_string).first()
