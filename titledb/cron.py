@@ -12,7 +12,8 @@ def process_submission_queue(cache_root=None):
     for submission in submissions:
         if submission.url:
             try:
-                with DBSession.begin_nested():
+                with transaction.manager:
+                #with DBSession.begin_nested():
                     result = json.dumps(process_url(submission.url, cache_root=cache_root))
                     #process_url(asset['browser_download_url'], cache_root=cache_root)
             except:

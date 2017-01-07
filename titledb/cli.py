@@ -36,7 +36,8 @@ def usage(argv):
     sys.exit(1)
 
 def action_add(settings, url):
-    url_info = process_url(url,cache_root=settings['titledb.cache'])
+    with transaction.manager:
+        url_info = process_url(url,cache_root=settings['titledb.cache'])
     
 def action_cron(settings, args):
     process_submission_queue(cache_root=settings['titledb.cache'])
@@ -86,8 +87,7 @@ def main(argv=sys.argv):
     else:
         args = None
 
-    with transaction.manager:
-        action(settings,args)
+    action(settings,args)
 
 
 

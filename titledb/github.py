@@ -36,10 +36,9 @@ def github_full_scan(cache_root=None):
                 try:
                     with DBSession.begin_nested():
                         process_url(asset['browser_download_url'], cache_root=cache_root)
+                        transaction.commit()
                 except:
                     transaction.rollback()
-                else:
-                    transaction.commit()
 
         else:
             print("Failure: "+github_api_url)

@@ -307,7 +307,7 @@ class AssetsSchemaModerator(AssetsSchema):
 
 class Category(GenericBase):
     __tablename__ = 'category'
-    name = Column(Text)
+    name = Column(Text(128))
 
 class CategorySchema(RenderSchema):
     id = fields.Integer(dump_only=True)
@@ -334,11 +334,11 @@ class SubmissionSchemaEveryone(SubmissionSchema):
 
 class User(GenericBase):
     __tablename__ = 'users'
-    name = Column(Text, unique=True)
-    password = Column(Text)
-    email = Column(Text)
+    name = Column(Text(64))
+    password = Column(Text(64))
+    email = Column(Text(256))
  
 class Group(GenericBase):
     __tablename__ = 'groups'
-    name = Column(Text)
+    name = Column(Text(64))
  
