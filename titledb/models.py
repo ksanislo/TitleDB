@@ -76,7 +76,7 @@ class FileSchemaNested(FileSchema):
 
 class URL(GenericBase):
     __tablename__ = 'url'
-    url = Column(Text(1024), index=True, unique=True)
+    url = Column(Text(1024), index=True)
     filename = Column(Text(256))
     version = Column(Text(64))
     etag = Column(Text(512))
