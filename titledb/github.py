@@ -34,9 +34,10 @@ def github_full_scan(cache_root=None):
         if 'assets' in data:
             for asset in data['assets']:
                 try:
-                    with DBSession.begin_nested():
-                        process_url(asset['browser_download_url'], cache_root=cache_root)
-                        transaction.commit()
+                    with transaction.manager:
+                        with DBSession.begin_nested():
+                            process_url(asset['browser_download_url'], cache_root=cache_root)
+                            #transaction.commit()
                 except:
                     transaction.rollback()
 
