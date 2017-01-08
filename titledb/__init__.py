@@ -28,19 +28,6 @@ def add_cors_headers_response_callback(event):
 def main(global_config, **settings):
     engine = engine_from_config(settings, 'sqlalchemy.')
 
-
-#    @event.listens_for(engine, "connect")
-#    def do_connect(dbapi_connection, connection_record):
-#        # disable pysqlite's emitting of the BEGIN statement entirely.
-#        # also stops it from emitting COMMIT before any DDL.
-#        dbapi_connection.isolation_level = None
-#
-#    @event.listens_for(engine, "begin")
-#    def do_begin(conn):
-#        # emit our own BEGIN
-#        conn.execute("BEGIN")
-
-
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
 
