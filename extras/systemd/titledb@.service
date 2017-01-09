@@ -7,7 +7,7 @@ User=titledb
 Group=titledb
 GuessMainPID=yes
 Restart=always
-ExecStart=/usr/local/bin/pserve /home/titledb/TitleDB/production.ini http_port=%i db_password=c4fJKPl7yw2+ auth_secret=r2d2
+ExecStart=/usr/local/bin/pserve /home/titledb/TitleDB/production.ini http_port=%i db_password=<PASSWORD> auth_secret=<SECRET>
 
 [Install]
 WantedBy=multi-user.target
