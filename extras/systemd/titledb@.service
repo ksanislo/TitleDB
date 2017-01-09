@@ -1,0 +1,13 @@
+[Unit]
+Description=TitleDB Production - port %i
+After=network.target
+
+[Service]
+User=titledb
+Group=titledb
+GuessMainPID=yes
+Restart=always
+ExecStart=/usr/local/bin/pserve /home/titledb/TitleDB/production.ini http_port=%i db_password=c4fJKPl7yw2+ auth_secret=r2d2
+
+[Install]
+WantedBy=multi-user.target
