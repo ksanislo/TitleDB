@@ -41,5 +41,3 @@ Authentication is currently managed with basic web pages on /v1/login and /v1/lo
 
 There's also a /v1/time object which will return the current time in ISO8601 format
 
-Feel free to play around with the dev preview and try it all out. The database may get blown away here or there while I'm working with it though, as right now dev is being served by a reverse proxy pointed at my local development environment at home. I'll switch this out to a proper uWSGI deployment on a hosted server in the near future, and set it up with hooks to track the GitHub repository as commits are published instead.
-
