@@ -409,7 +409,7 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
                 relative_entry_ids.append(relative.entry_id)
 
             if relative.assets_id:
-                relative_assets_ids.appent(relative.assets_id)
+                relative_assets_ids.append(relative.assets_id)
 
             # Try to find an exact match for this file in our relatives.
             if relative.__class__ == item.__class__ and relative.path and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):

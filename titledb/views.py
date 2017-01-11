@@ -339,7 +339,7 @@ class TitleDBViews:
         request = self.request
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
-            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).first()
+            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).order_by(CIA.updated_at.desc()).first()
             if cia:
                 #create_png_from_icon(cia.icon_l, 'titledb/images/'+cia.titleid+'.png')
                 return Response(pragma='public',cache_control='max-age=86400',content_type='image/png',
