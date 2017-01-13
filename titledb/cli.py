@@ -46,7 +46,7 @@ def action_github(settings, args):
     github_full_scan(cache_root=settings['titledb.cache'])
 
 def action_none(settings, url):
-    print(find_version_in_string(url))
+    None
 
 def main(argv=sys.argv):
     #if len(argv) != 2:

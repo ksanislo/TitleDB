@@ -7,6 +7,9 @@ from .models import (
 import json
 import requests
 import transaction
+import logging
+
+log = logging.getLogger(__name__)
 
 def github_full_scan(cache_root=None):
     url_like = 'https://github.com/%/releases/download/%'
@@ -19,7 +22,6 @@ def github_full_scan(cache_root=None):
             api_urls.append(github_user_repo_to_api(repouser, reponame))
 
     api_urls = set(api_urls)
-    print(api_urls)
 
     headers = {}
     headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
@@ -42,7 +44,7 @@ def github_full_scan(cache_root=None):
                     transaction.rollback()
 
         else:
-            print("Failure: "+github_api_url)
+            log.info("GitHub API Failure: %s", github_api_url)
 
 def github_parse_user_repo(url):
     return url.url.split('/')[3:5]

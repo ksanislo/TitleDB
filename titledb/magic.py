@@ -14,6 +14,9 @@ import base64
 import collections
 import libarchive
 
+import logging
+log = logging.getLogger(__name__)
+
 from datetime import datetime
 
 from .models import (
@@ -74,7 +77,7 @@ def determine_mimetype(filename, content_type=None):
 def url_to_cache_path(string, cache_root):
     url_hash = hashlib.sha256(string.encode('utf-8')).hexdigest()
     cache_path = os.path.join(cache_root, url_hash[0:3], url_hash[3:6], url_hash[6:])
-    print(cache_path)
+    log.debug('Cache path: %s', cache_path)
     return(cache_path)
 
 def download_to_filename(r, filename):
@@ -290,7 +293,7 @@ def process_archive(parent, relatives, cache_path):
                         os.utime(working_file, (entry.mtime,entry.mtime))
                         results.append(action(parent, relatives, cache_path, entry.pathname))
     except libarchive.exception.ArchiveError as e:
-        print(e)
+        log.debug("Archive error: %s", e)
 
     return(results)
 
@@ -322,7 +325,7 @@ def process_rar_archive(parent, relatives, cache_path):
                     os.utime(working_file, (entry.date_time.timestamp(),entry.date_time.timestamp()))
                     results.append(action(parent, relatives, cache_path, entry.filename))
     except rarfile.Error as e:
-        print(e)
+        log.debug("Archive error: %s", e)
 
     return(results)
 
