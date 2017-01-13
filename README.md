@@ -40,4 +40,3 @@ DELETE is also supported, but only by admin accounts, since an object's id will 
 Authentication is currently managed with basic web pages on /v1/login and /v1/logout, and current status can be checked via /v1/login_status, I've not settled on how this should be implemented quite yet, so things will change around a bit here.
 
 There's also a /v1/time object which will return the current time in ISO8601 format
-
