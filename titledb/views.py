@@ -286,7 +286,7 @@ class TitleDBViews:
                 return submission
 
         sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).subquery()
-        data = DBSession.query(CIA_v0).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).order_by(CIA.created_at.desc()).all()
+        data = DBSession.query(CIA_v0).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.active==True).order_by(CIA.created_at.desc()).all()
 
         titleids = []
         unique = []
@@ -345,7 +345,7 @@ class TitleDBViews:
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
             sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
-            cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).order_by(CIA.created_at.desc()).first()
+            cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).filter(CIA.active==True).order_by(CIA.created_at.desc()).first()
             if cia:
                 #create_png_from_icon(cia.icon_l, 'titledb/images/'+cia.titleid+'.png')
                 return Response(pragma='public',cache_control='max-age=300',content_type='image/png',
@@ -368,7 +368,7 @@ class TitleDBViews:
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
             sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
-            cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).order_by(CIA.created_at.desc()).first()
+            cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).filter(CIA.active==True).order_by(CIA.created_at.desc()).first()
             url = cia.url
             if cia:
                 if cia.path:
