@@ -272,12 +272,15 @@ def find_item_relatives(item):
             fnwc = item.filename.rsplit(mimetypes.guess_extension(item.content_type, strict=False), 1)[0]+'\.[^/]+'
             # Replace the filename with the above wildcard
             urlwc = item.url.replace(item.filename, fnwc)
+            # Determine if http or https, and adjust rexgep to wildcard both.
+            if urlwc[4] == 's':
+                urlwc = urlwc[0:5] + '?' + urlwc[5:]
+            else:
+                urlwc = urlwc[0:4] + 's?' + urlwc[4:]
             # Replace any version strings with a wildcard as well.
             REGEX = urlwc.replace(str(item.version),'[^/]+')
 
         new_items = DBSession.query(item_cls).filter(item_cls.url_id == URL.id).filter(URL.url.op('regexp')(REGEX)).all()
-        import pdb; pdb.set_trace()
-
 
         log.debug('new_items: %s', new_items)
         relatives.extend(new_items)
