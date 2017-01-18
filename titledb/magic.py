@@ -262,11 +262,22 @@ def find_item_relatives(item):
     relatives = list()
     for item_cls in (CIA, TDSX, ARM9):
 
-        m = re.fullmatch('(https?://github.com/[^/]+/[^/]+/releases/download/)[^/]+/[^/]+', item.url)
+        # Differentiate between github release links and everything else.
+        # GitHub releases get grouped together into one entry automatically.
+        m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/[^/]+/[^/]+', item.url)
         if m:
-            new_items = DBSession.query(item_cls).filter(item_cls.url_id == URL.id).filter(URL.url.like(m.group(1)+'%')).all()
+            REGEX = '^https?://github.com/'+m.group(1)+'/'+m.group(2)+'/releases/download/.*$'
         else:
-            new_items = DBSession.query(item_cls).filter(item_cls.url_id == URL.id).filter(URL.url.like(item.url.replace(str(item.version),'%'))).all()
+            # Wildcard the filename
+            fnwc = item.filename.rsplit(mimetypes.guess_extension(item.content_type, strict=False), 1)[0]+'\.[^/]+'
+            # Replace the filename with the above wildcard
+            urlwc = item.url.replace(item.filename, fnwc)
+            # Replace any version strings with a wildcard as well.
+            REGEX = urlwc.replace(str(item.version),'[^/]+')
+
+        new_items = DBSession.query(item_cls).filter(item_cls.url_id == URL.id).filter(URL.url.op('regexp')(REGEX)).all()
+        import pdb; pdb.set_trace()
+
 
         log.debug('new_items: %s', new_items)
         relatives.extend(new_items)
