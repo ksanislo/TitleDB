@@ -348,7 +348,7 @@ class TitleDBViews:
             cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).order_by(CIA.created_at.desc()).first()
             if cia:
                 #create_png_from_icon(cia.icon_l, 'titledb/images/'+cia.titleid+'.png')
-                return Response(pragma='public',cache_control='max-age=86400',content_type='image/png',
+                return Response(pragma='public',cache_control='max-age=300',content_type='image/png',
                                 body=create_png_from_icon(cia.icon_l))
         return dict(error='TitleID not found.')
 
