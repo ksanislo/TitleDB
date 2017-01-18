@@ -76,6 +76,8 @@ from datetime import datetime
 from urllib import parse
 from collections import OrderedDict
 
+from sqlalchemy.sql import ( select, func, cast, and_ )
+
 class register_views(object):
     def __init__(self, route=None, collection_route=None):
         self.route = route
@@ -270,7 +272,7 @@ class TitleDBViews:
 
         return(results)
 
-    @view_config(route_name='cia_collection_v0') #, renderer='json')
+    @view_config(route_name='cia_collection_v0') 
     def legacy_list_v0(self):
         if self.request.method == 'POST':
             mydata = json.loads(self.request.body.decode("utf-8"))
@@ -282,7 +284,10 @@ class TitleDBViews:
                 DBSession.flush()
                 self.request.render_schema = SubmissionSchema()
                 return submission
-        data = DBSession.query(CIA_v0).filter_by(active=True).order_by(CIA.updated_at.desc()).all()
+
+        sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).subquery()
+        data = DBSession.query(CIA_v0).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).order_by(CIA.created_at.desc()).all()
+
         titleids = []
         unique = []
         for item in data:
@@ -339,7 +344,8 @@ class TitleDBViews:
         request = self.request
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
-            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).order_by(CIA.updated_at.desc()).first()
+            sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
+            cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).order_by(CIA.created_at.desc()).first()
             if cia:
                 #create_png_from_icon(cia.icon_l, 'titledb/images/'+cia.titleid+'.png')
                 return Response(pragma='public',cache_control='max-age=86400',content_type='image/png',
@@ -361,7 +367,8 @@ class TitleDBViews:
         request = self.request
         if request.matchdict and request.matchdict['titleid']:
             titleid = request.matchdict['titleid']
-            cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).order_by(CIA.updated_at.desc()).first()
+            sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
+            cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).order_by(CIA.created_at.desc()).first()
             url = cia.url
             if cia:
                 if cia.path:

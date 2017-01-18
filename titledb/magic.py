@@ -197,7 +197,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                 result_item.url = item
 
         our_entry = None
-        for result_item in results + relatives:
+        for result_item in results + relatives: # FIXME: I think this is wrong.
             if 'entry' in dir(result_item) and result_item.entry:
                 our_entry = result_item.entry
                 break
@@ -259,10 +259,16 @@ def check_siblings(first, second):
     return(False)
 
 def find_item_relatives(item):
-    previous_item = DBSession.query(URL).filter(URL.url.like(item.url.replace(str(item.version),'%'))).order_by(URL.created_at.desc()).first()
     relatives = list()
     for item_cls in (CIA, TDSX, ARM9):
-        new_items = DBSession.query(item_cls).filter(item_cls.url == previous_item).all()
+
+        m = re.fullmatch('(https?://github.com/[^/]+/[^/]+/releases/download/)[^/]+/[^/]+', item.url)
+        if m:
+            new_items = DBSession.query(item_cls).filter(item_cls.url_id == URL.id).filter(URL.url.like(m.group(1)+'%')).all()
+        else:
+            new_items = DBSession.query(item_cls).filter(item_cls.url_id == URL.id).filter(URL.url.like(item.url.replace(str(item.version),'%'))).all()
+
+        log.debug('new_items: %s', new_items)
         relatives.extend(new_items)
     return(relatives)
 
@@ -382,7 +388,7 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
     else:
         url = parent.url
 
-    if url.id:
+    if url.id: # FIXME: I don't like this, it can be much cleaner.
         item = DBSession.query(cls).filter_by(url_id=url.id, path=archive_path).first()
     else:
         item = None
@@ -401,6 +407,7 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
     item.sha256 = checksum_sha256(filename)
 
     if relatives:
+        log.debug('Relatives: %s', relatives)
         if not isinstance(relatives, collections.Iterable):
             relatives = [relatives]
 
@@ -415,7 +422,7 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
                 relative_assets_ids.append(relative.assets_id)
 
             # Try to find an exact match for this file in our relatives.
-            if relative.__class__ == item.__class__ and relative.path and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
+            if relative.__class__ == item.__class__ and item.path and relative.path and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
                 item.entry_id = relative.entry_id
                 item.assets_id = relative.assets_id
 

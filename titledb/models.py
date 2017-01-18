@@ -8,7 +8,7 @@ from sqlalchemy import (
     DateTime,
     Integer,
     Binary,
-    Text,
+    String,
     Unicode,
     ForeignKey
 )
@@ -50,11 +50,11 @@ class GenericSchema(RenderSchema):
         exclude = ['created_at','updated_at']
 
 class FileBase(GenericBase, AbstractConcreteBase):
-    version = Column(Text(64))
+    version = Column(String(64))
     size = Column(Integer)
     mtime = Column(DateTime)
-    path = Column(Text(512))
-    sha256 = Column(Text(64))
+    path = Column(String(512))
+    sha256 = Column(String(64))
     @declared_attr
     def url_id(cls):
         return Column(Integer, ForeignKey('url.id'))
@@ -76,14 +76,14 @@ class FileSchemaNested(FileSchema):
 
 class URL(GenericBase):
     __tablename__ = 'url'
-    url = Column(Text(1024), index=True)
-    filename = Column(Text(256))
-    version = Column(Text(64))
-    etag = Column(Text(512))
+    url = Column(String(1024), index=True)
+    filename = Column(String(256))
+    version = Column(String(64))
+    etag = Column(String(512))
     mtime = Column(DateTime)
-    content_type = Column(Text(64))
+    content_type = Column(String(64))
     size = Column(Integer)    
-    sha256 = Column(Text(64)) 
+    sha256 = Column(String(64)) 
     cia = relationship('CIA',
         primaryjoin='and_(CIA.url_id == URL.id, CIA.active == True)')
     tdsx = relationship('TDSX',
@@ -119,11 +119,11 @@ class Entry(GenericBase):
     __tablename__ = 'entry'
     category_id = Column(Integer, ForeignKey('category.id'))
     category = relationship('Category')
-    name = Column(Text(128))
-    author = Column(Text(128))
-    headline = Column(Text(128))
-    description = Column(Text(4096))
-    url = Column(Text(2048))
+    name = Column(String(128))
+    author = Column(String(128))
+    headline = Column(String(128))
+    description = Column(String(4096))
+    url = Column(String(2048))
     cia = relationship('CIA',
         primaryjoin='and_(CIA.entry_id == Entry.id, CIA.active == True)')
     tdsx = relationship('TDSX',
@@ -150,12 +150,12 @@ class CIA(FileBase):
     __tablename__ = 'cia'
     entry_id = Column(Integer, ForeignKey('entry.id'))
     assets_id = Column(Integer, ForeignKey('assets.id'))
-    titleid = Column(Text(16))
+    titleid = Column(String(16))
     name_s = Column(Unicode(64))
     name_l = Column(Unicode(128))
     publisher = Column(Unicode(64))
-    icon_s = Column(Text(1535))
-    icon_l = Column(Text(6144))
+    icon_s = Column(String(1536))
+    icon_l = Column(String(6144))
     entry = relationship('Entry')
     assets = relationship('Assets')
 
@@ -238,8 +238,8 @@ class SMDH(FileBase):
     name_s = Column(Unicode(64))
     name_l = Column(Unicode(128))
     publisher = Column(Unicode(64))
-    icon_s = Column(Text(1535))
-    icon_l = Column(Text(6144))
+    icon_s = Column(String(1536))
+    icon_l = Column(String(6144))
     tdsx = relationship('TDSX', uselist=False,
         primaryjoin='and_(TDSX.smdh_id == SMDH.id, TDSX.active == True)')
 
@@ -283,7 +283,7 @@ class ARM9SchemaNested(FileSchemaNested, ARM9Schema):
 
 class Assets(FileBase):
     __tablename__ = 'assets'
-    mapping = Column(Text(4096))
+    mapping = Column(String(4096))
     cia = relationship('CIA',
         primaryjoin='and_(CIA.assets_id == Assets.id, CIA.active == True)')
     tdsx = relationship('TDSX',
@@ -307,7 +307,7 @@ class AssetsSchemaModerator(AssetsSchema):
 
 class Category(GenericBase):
     __tablename__ = 'category'
-    name = Column(Text(128))
+    name = Column(String(128))
 
 class CategorySchema(RenderSchema):
     id = fields.Integer(dump_only=True)
@@ -319,8 +319,8 @@ class CategorySchema(RenderSchema):
 class Submission(GenericBase):
     __tablename__ = 'submission'
     active = Column(Boolean, default=True)
-    url = Column(Text(1024))
-    status = Column(Text(1024))
+    url = Column(String(1024))
+    status = Column(String(1024))
 
 class SubmissionSchema(GenericSchema):
     url = fields.URL(required=True)
@@ -334,11 +334,11 @@ class SubmissionSchemaEveryone(SubmissionSchema):
 
 class User(GenericBase):
     __tablename__ = 'users'
-    name = Column(Text(64))
-    password = Column(Text(64))
-    email = Column(Text(256))
+    name = Column(String(64))
+    password = Column(String(64))
+    email = Column(String(256))
  
 class Group(GenericBase):
     __tablename__ = 'groups'
-    name = Column(Text(64))
+    name = Column(String(64))
  
