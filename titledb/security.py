@@ -25,7 +25,8 @@ def authtkt_callback(userid, request):
     except NoResultFound:
         return None
 
-    groupquery = DBSession.query(Group).filter_by(id=userquery.id).all()
+    # FIXME: This is pretty broken, right now group is matched id to id with users.
+    groupquery = DBSession.query(Group).filter_by(id=userquery.id, active=True).all()
 
     groups = []
     for item in groupquery:

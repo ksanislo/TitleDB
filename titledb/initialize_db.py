@@ -47,7 +47,7 @@ def main(argv=sys.argv):
             DBSession.add(usermodel)
 
             user = DBSession.query(User).filter_by(name=username).one()
-            groupmodel = Group(id=user.id, name='super')
+            groupmodel = Group(id=user.id, name='super', active=True)
             DBSession.add(groupmodel)
 
     with transaction.manager:
