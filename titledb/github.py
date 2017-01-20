@@ -1,10 +1,13 @@
-from .magic import process_url
+#from .magic import process_url
+import titledb.magic
+
 from .models import (
     DBSession,
     URL
 )
 
 import json
+import re
 import requests
 import transaction
 import logging
@@ -38,7 +41,7 @@ def github_full_scan(cache_root=None):
                 try:
                     with transaction.manager:
                         with DBSession.begin_nested():
-                            process_url(asset['browser_download_url'], cache_root=cache_root)
+                            titledb.magic.process_url(asset['browser_download_url'], cache_root=cache_root)
                             #transaction.commit()
                 except:
                     transaction.rollback()
@@ -47,7 +50,10 @@ def github_full_scan(cache_root=None):
             log.info("GitHub API Failure: %s", github_api_url)
 
 def github_parse_user_repo(url):
-    return url.url.split('/')[3:5]
+    m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/[^/]+/[^/]+', url.url)
+    if m:
+        return(m.group(1), m.group(2))
+    return (None, None)
 
 def github_user_repo_to_api(repouser, reponame):
     return('https://api.github.com/repos/' + repouser + '/' + reponame + '/releases/latest')

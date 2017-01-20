@@ -19,6 +19,9 @@ log = logging.getLogger(__name__)
 
 from datetime import datetime
 
+#from .github import ( github_parse_user_repo )
+from .github import github_parse_user_repo
+
 from .models import (
     DBSession,
     URL,
@@ -196,22 +199,11 @@ def process_url(url_string=None, url_id=None, cache_root=''):
             if not result_item.url:
                 result_item.url = item
 
-        our_entry = None
-        for result_item in results + relatives: # FIXME: I think this is wrong.
-            if 'entry' in dir(result_item) and result_item.entry:
-                our_entry = result_item.entry
-                break
+        our_entry = find_or_fill_entry(results, relatives)
 
+        # Once more over everything, now that we have valid ids.
         for result_item in results:
-            if not our_entry and result_item.__class__ in (SMDH, CIA):
-                our_entry = Entry(active=1,
-                                  name=result_item.name_s,
-                                  author=result_item.publisher, 
-                                  headline=result_item.name_l)
-                break
-
-        # Once more over everything, now that we have valid ids for everything.
-        for result_item in results:
+            # Apply our entry to any new items which don't have one defined. 
             if our_entry and 'entry' in dir(result_item) and not result_item.entry:
                 result_item.entry = our_entry
 
@@ -226,6 +218,66 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
     DBSession.flush()
     return URLSchema().dump(item).data
+
+def find_or_fill_entry(results, relatives=None):
+    """
+    Finds an existing entry in either the current result set,
+    or in relatives from the database. Otherwise create a new Entry()
+    object and fill it in from either GitHub or SMDH/CIA data.
+    """
+    our_entry = None
+    relative_entry_ids = []
+
+    # Find the most common entry_id from the relatives.
+    for result_item in results + relatives:
+        if 'entry_id' in dir(result_item) and result_item.entry_id:
+            relative_entry_ids.append(result_item.entry_id)
+
+    # Check if we found any entries, and set the most common one.
+    if relative_entry_ids:
+        counter = collections.Counter(relative_entry_ids)
+        return DBSession.query(Entry).get(counter.most_common(1)[0][0])
+
+    # If we don't have an existing entry, we'll check for GitHub URLs
+    # And use that as our data-source for creating one.
+    for result_item in results:
+        #m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/[^/]+/[^/]+', result_item.url.url)
+        #if m:
+        #    infourl = 'https://api.github.com/repos/'+m.group(1)+'/'+m.group(2)
+        (repouser,reponame) = github_parse_user_repo(result_item.url)
+        if repouser and reponame:
+            github_api_url = 'https://api.github.com/repos/'+repouser+'/'+reponame
+            github_readme_url = 'https://raw.githubusercontent.com/'+repouser+'/'+reponame+'/master/README.md'
+            headers = {'User-Agent': 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'}
+
+            userpass = json.load(open("private/github_credentials.json"))
+            req = requests.get(github_api_url, headers=headers, auth=(userpass['username'],userpass['password']))
+
+            data = json.loads(req.text)
+
+            #import pdb; pdb.set_trace()
+
+            readme = requests.get(data['html_url']+'/blob/master/README.md?raw=true', headers=headers, auth=(userpass['username'],userpass['password']))
+
+            return Entry(active=1,
+                         name=reponame,
+                         author=repouser,
+                         headline=data['description'],
+                         url=data['html_url'],
+                         description=readme.text)
+
+    # We'll try to make a new one using the first SMDH data we find.
+    for result_item in results:
+        if result_item.__class__ in (SMDH, CIA):
+            return Entry(active=1,
+                         name=result_item.name_s,
+                         author=result_item.publisher, 
+                         headline=result_item.name_l)
+
+    # If there's _still_ no entry, it's time to get desperate.
+    return Entry(active=1,
+                 name=results[0].url.filename,
+                 headline=results[0].url.url)
 
 def find_nonarchive_results(item):
     results = list()
