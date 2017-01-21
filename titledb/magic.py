@@ -182,18 +182,18 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         if action:
             relatives = find_item_relatives(item)
             results = action(item, relatives, cache_path)
-            if results:
-                item.active = True
-        else:
-            item.active = False
+        #    if results:
+        #        item.active = True
+        #else:
+        #    item.active = False
 
     elif not r.status_code == 304:
         item.active = False
 
     if results:
-        if not isinstance(results, collections.Iterable):
+        is_archive = isinstance(results, collections.Iterable)
+        if not is_archive:
             results = [results]
-            results.extend(find_nonarchive_results(item))
 
         for result_item in results:
             if not result_item.url:
@@ -201,20 +201,47 @@ def process_url(url_string=None, url_id=None, cache_root=''):
 
         our_entry = find_or_fill_entry(results, relatives)
 
+        for result_item in results:
+            # We should check for duplicates here.
+            for cls in (ARM9, CIA, TDSX):
+                matches = DBSession.query(cls).filter_by(entry_id=our_entry.id, size=result_item.size, sha256=result_item.sha256).all()
+                for match in matches:
+                    if match != result_item:
+                        if result_item.active and result_item.path and not match.path:
+                            match.active = False
+                        elif match.active and match.path and not result_item.path:
+                            result_item.active = False
+                        elif match.active:
+                            # Both have a path, keep the first one.
+                            result_item.active = False
+
+            # This will kill duplicates inside an archive.
+            for check_item in results:
+                if result_item != check_item \
+                and result_item.size == check_item.size \
+                and result_item.sha256 == check_item.sha256 \
+                and result_item.active and check_item.active:
+                    check_item.active = False
+
+        # This will add non-archive siblings so we can link them together
+        if not is_archive:
+            results.extend(find_nonarchive_results(item))
+
         # Once more over everything, now that we have valid ids.
         for result_item in results:
             # Apply our entry to any new items which don't have one defined. 
             if our_entry and 'entry' in dir(result_item) and not result_item.entry:
                 result_item.entry = our_entry
 
-            # Match up any xml or smdh files in the same folder as our 3dsx.
-            if result_item.__class__ == TDSX:
-                for check_item in results:
-                    if check_siblings(check_item, result_item):
-                        exec('result_item.'+check_item.__class__.__name__.lower()+' = check_item')
+            for check_item in results:
+                # Match up any xml or smdh files in the same folder as our 3dsx.
+                if check_item.active and result_item.__class__ == TDSX and check_siblings(check_item, result_item):
+                    exec('result_item.'+check_item.__class__.__name__.lower()+' = check_item')
 
-            if not result_item.id and result_item.active:
-                DBSession.add(result_item)
+            if result_item.active:
+                item.active = True # FIXME: Should avoid find_nonarchive_results() additions from above.
+                if not result_item.id:
+                    DBSession.add(result_item)
 
     DBSession.flush()
     return URLSchema().dump(item).data
@@ -367,6 +394,16 @@ def process_archive(parent, relatives, cache_path):
     except libarchive.exception.ArchiveError as e:
         log.debug("Archive error: %s", e)
 
+    if results:
+         for result_item in results:
+            # Match up any xml or smdh files in the same folder as our 3dsx.
+            if result_item.__class__ in (XML, SMDH):
+                matched = False
+                for check_item in results:
+                    if not matched:
+                        matched = check_siblings(check_item, result_item)
+                result_item.active = matched
+
     return(results)
 
 def process_rar_archive(parent, relatives, cache_path):
@@ -398,6 +435,16 @@ def process_rar_archive(parent, relatives, cache_path):
                     results.append(action(parent, relatives, cache_path, entry.filename))
     except rarfile.Error as e:
         log.debug("Archive error: %s", e)
+
+    if results:
+         for result_item in results:
+            # Match up any xml or smdh files in the same folder as our 3dsx.
+            if result_item.__class__ in (XML, SMDH):
+                matched = False
+                for check_item in results:
+                    if not matched:
+                        matched = check_siblings(check_item, result_item)
+                result_item.active = matched
 
     return(results)
 

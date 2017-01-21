@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     Binary,
     String,
+    Text,
     Unicode,
     ForeignKey
 )
@@ -122,7 +123,7 @@ class Entry(GenericBase):
     name = Column(String(128))
     author = Column(String(128))
     headline = Column(String(128))
-    description = Column(String(4096))
+    description = Column(Text)
     url = Column(String(2048))
     cia = relationship('CIA',
         primaryjoin='and_(CIA.entry_id == Entry.id, CIA.active == True)')
@@ -283,7 +284,7 @@ class ARM9SchemaNested(FileSchemaNested, ARM9Schema):
 
 class Assets(FileBase):
     __tablename__ = 'assets'
-    mapping = Column(String(4096))
+    mapping = Column(Text)
     cia = relationship('CIA',
         primaryjoin='and_(CIA.assets_id == Assets.id, CIA.active == True)')
     tdsx = relationship('TDSX',
