@@ -50,7 +50,9 @@ def github_full_scan(cache_root=None):
             log.info("GitHub API Failure: %s", github_api_url)
 
 def github_parse_user_repo(url):
-    m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/[^/]+/[^/]+', url.url)
+    m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/.*/[^/]+', url.url)
+    log.debug(m)
+
     if m:
         return(m.group(1), m.group(2))
     return (None, None)

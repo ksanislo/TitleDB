@@ -59,7 +59,7 @@ def checksum_sha256(filename):
 
 def find_version_in_string(string):
     # GitHub URLs are easy, we'll just pick up the tag.
-    m = re.fullmatch('https?://github.com/[^/]+/[^/]+/releases/download/([^/]+)/[^/]+', string)
+    m = re.fullmatch('https?://github.com/[^/]+/[^/]+/releases/download/(.*)/[^/]+', string)
     if m:
         return m.group(1)
 
@@ -268,9 +268,6 @@ def find_or_fill_entry(results, relatives=None):
     # If we don't have an existing entry, we'll check for GitHub URLs
     # And use that as our data-source for creating one.
     for result_item in results:
-        #m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/[^/]+/[^/]+', result_item.url.url)
-        #if m:
-        #    infourl = 'https://api.github.com/repos/'+m.group(1)+'/'+m.group(2)
         (repouser,reponame) = github_parse_user_repo(result_item.url)
         if repouser and reponame:
             github_api_url = 'https://api.github.com/repos/'+repouser+'/'+reponame
@@ -343,7 +340,7 @@ def find_item_relatives(item):
 
         # Differentiate between github release links and everything else.
         # GitHub releases get grouped together into one entry automatically.
-        m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/[^/]+/[^/]+', item.url)
+        m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/.*/[^/]+', item.url)
         if m:
             REGEX = '^https?://github.com/'+m.group(1)+'/'+m.group(2)+'/releases/download/.*$'
         else:
