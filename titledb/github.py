@@ -51,7 +51,6 @@ def github_full_scan(cache_root=None):
 
 def github_parse_user_repo(url):
     m = re.fullmatch('https?://github.com/([^/]+)/([^/]+)/releases/download/.*/[^/]+', url.url)
-    log.debug(m)
 
     if m:
         return(m.group(1), m.group(2))

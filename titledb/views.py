@@ -160,6 +160,8 @@ class BaseView(object):
             if errors:
                 return errors
             item = self.item_cls(**data)
+            if 'client_addr' in dir(item):
+                item.client_addr = self.request.client_addr
             DBSession.add(item)
             DBSession.flush()
             self.request.render_schema = self.active_schema

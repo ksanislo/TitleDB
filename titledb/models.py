@@ -322,6 +322,7 @@ class Submission(GenericBase):
     active = Column(Boolean, default=True)
     url = Column(String(1024))
     status = Column(String(1024))
+    client_addr = Column(String(45)) # IPv4-mapped IPv6 maximum
 
 class SubmissionSchema(GenericSchema):
     url = fields.URL(required=True)
@@ -330,7 +331,7 @@ class SubmissionSchema(GenericSchema):
 class SubmissionSchemaEveryone(SubmissionSchema):
     class Meta:
         ordered = True
-        exclude = ['created_at','updated_at']
+        exclude = ['created_at','updated_at','client_addr']
         dump_only = ['active','status']
 
 class User(GenericBase):
