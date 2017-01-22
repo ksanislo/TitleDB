@@ -11,6 +11,7 @@ from PIL import Image
 
 def create_image_from_icondata(icon_txt, format='PNG', filename=None):
     icondata = array.array('H', base64.b64decode(icon_txt))
+    if format.lower() == 'bin': return base64.b64decode(icon_txt)
     squirt = int(sqrt(len(icondata))) # I think I'm funny.
     img = Image.new('RGB', (squirt, squirt), (255, 255, 255))
     pix = img.load()
