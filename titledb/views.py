@@ -380,20 +380,19 @@ class TitleDBViews:
             titleid = request.matchdict['titleid']
             sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
             cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).filter(CIA.active==True).order_by(CIA.created_at.desc()).first()
-            url = cia.url
             if cia:
                 if cia.path:
                     # Verify cache file is there and valid.
                     if verify_cache(cia):
                         return FileResponse(
-                                   os.path.join(url_to_cache_path(url.url, '/var/cache/titledb'), 'archive_root', cia.path),
+                                   os.path.join(url_to_cache_path(cia.url.url, request.registry.settings['titledb.cache']), 'archive_root', cia.path),
                                    request=request,
                                    content_type='application/x-3ds-archive'
                                )
                     else:
                         return Response('404 Not Found', status='404 Not Found')
                 else:
-                    return HTTPFound(location=url.url)
+                    return HTTPFound(location=cia.url.url)
         return dict(error='TitleID not found.')
 
     @view_config(route_name='download_v1')
@@ -407,19 +406,13 @@ class TitleDBViews:
             if item.path:
                 # Verify cache file is there and valid.
                 if verify_cache(item):
-                    switcher = {
-                        "cia": mimetypes.guess_type('potato.cia'),
-                        "tdsx": mimetypes.guess_type('potato.3dsx'),
-                        "arm9": mimetypes.guess_type('potato.bin'),
-                        "smdh": mimetypes.guess_type('potato.smdh'),
-                        "xml": mimetypes.guess_type('potato.xml')
-                    }
+                    filename = item.path.split('/')[-1]
                     response = FileResponse(
                                os.path.join(url_to_cache_path(item.url.url, request.registry.settings['titledb.cache']), 'archive_root', item.path),
                                request=request,
-                               content_type=switcher.get(item_table, 'application/octet-stream')[0]
+                               content_type=mimetypes.guess_type(filename)[0]
                            )
-                    response.content_disposition = 'attachment; filename="%s"' % item.path.split('/')[-1]
+                    response.content_disposition = 'attachment; filename="%s"' % filename
                     return response
                 else:
                     return Response('404 Not Found', status='404 Not Found')
