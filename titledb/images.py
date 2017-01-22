@@ -4,13 +4,15 @@ log = logging.getLogger(__name__)
 import array
 import base64
 
+from math import sqrt
 from io import BytesIO
 from PIL import Image
 
 
-def create_png_from_icon(icon_l, filename=None):
-    icondata = array.array('H', base64.b64decode(icon_l))
-    img = Image.new('RGB', (48, 48), (255, 255, 255))
+def create_image_from_icondata(icon_txt, format='PNG', filename=None):
+    icondata = array.array('H', base64.b64decode(icon_txt))
+    squirt = int(sqrt(len(icondata))) # I think I'm funny.
+    img = Image.new('RGB', (squirt, squirt), (255, 255, 255))
     pix = img.load()
 
     tileOrder = [
@@ -25,8 +27,8 @@ def create_png_from_icon(icon_l, filename=None):
     ]
 
     i = 0;
-    for tile_y in range(0, 48, 8):
-        for tile_x in range(0, 48, 8):
+    for tile_y in range(0, squirt, 8):
+        for tile_x in range(0, squirt, 8):
             for k in range(0, 8*8):
                 x = tileOrder[k] & 0x7;
                 y = tileOrder[k] >> 3;
@@ -42,7 +44,7 @@ def create_png_from_icon(icon_l, filename=None):
         img.save(filename)
     else:
         output = BytesIO()
-        img.save(output, format="PNG")
+        img.save(output, format=format)
         png_image = output.getvalue()
         output.close()
         return png_image

@@ -2,6 +2,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import json
+import mimetypes
 import os
 
 from datetime import datetime
@@ -25,7 +26,7 @@ from pyramid.view import (
 )
 
 from .security import check_password
-from .images import create_png_from_icon
+from .images import create_image_from_icondata
 from .proxy import verify_cache
 from .models import (
     DBSession,
@@ -350,20 +351,27 @@ class TitleDBViews:
             sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
             cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).filter(CIA.active==True).order_by(CIA.created_at.desc()).first()
             if cia:
-                #create_png_from_icon(cia.icon_l, 'titledb/images/'+cia.titleid+'.png')
                 return Response(pragma='public',cache_control='max-age=300',content_type='image/png',
-                                body=create_png_from_icon(cia.icon_l))
+                                body=create_image_from_icondata(cia.icon_l, format='png'))
         return dict(error='TitleID not found.')
 
-    #@view_config(route_name='redirect_v0')
-    #def redirect_to_url(self):
-    #    request = self.request
-    #    if request.matchdict and request.matchdict['titleid']:
-    #        titleid = request.matchdict['titleid']
-    #        cia = DBSession.query(CIA).filter(CIA.titleid.ilike(titleid)).first()
-    #        if cia:
-    #            return HTTPFound(location=cia.url)
-    #    return dict(error='TitleID not found.')
+    @view_config(route_name='icon_image_v1')
+    def icon_image(self):
+        request = self.request
+        item_id = request.matchdict['id']
+        item_table = request.matchdict['table']
+        item_field = request.matchdict['field']
+        item_format = request.matchdict['format']
+        if item_format == 'jpg': item_format = 'jpeg'
+        switcher = { "cia": CIA, "smdh": SMDH }
+        item = DBSession.query(switcher.get(item_table, None)).get(item_id)
+        if item:
+            switcher = { "icon_s": item.icon_s, "icon_l": item.icon_l }
+            return Response(pragma='public',
+                            cache_control='max-age=300',
+                            content_type=mimetypes.guess_type(self.request.url, strict=True)[0],
+                            body=create_image_from_icondata(switcher.get(item_field, item.icon_l), format=item_format))
+        return Response('404 Not Found', status='404 Not Found')
 
     @view_config(route_name='proxy_v0')
     def proxy_or_redirect_cia(self):
@@ -383,7 +391,7 @@ class TitleDBViews:
                                    content_type='application/x-3ds-archive'
                                )
                     else:
-                        return HTTPNotFound()
+                        return Response('404 Not Found', status='404 Not Found')
                 else:
                     return HTTPFound(location=url.url)
         return dict(error='TitleID not found.')
