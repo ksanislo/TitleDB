@@ -20,7 +20,7 @@ File object collections (these will generally will be filled by the scan/import 
 Special object collections (File object, but with editable "mapping" script that moderators will need to provide/edit):  
 /v1/assets  
 
-Generate icon of specified format. You can specify png, gif, jpg, bmp, or bin (3DS GPU native): 
+Generate icon of specified format. You can specify png, gif, jpg, bmp, or bin (3DS GPU native):  
 /v1/{type}/{id}/{field}.{format} (eg. /v1/cia/44/icon_l.png or /v1/smdh/7/icon_s.bmp) 
 
 Redirect or proxy download URL: 
