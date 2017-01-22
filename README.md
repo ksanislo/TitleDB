@@ -23,8 +23,8 @@ Special object collections (File object, but with editable "mapping" script that
 Generate icon of specified format. You can specify png, gif, jpg, bmp, or bin (3DS GPU native):  
 /v1/{type}/{id}/{field}.{format} (eg. /v1/cia/44/icon_l.png or /v1/smdh/7/icon_s.bmp) 
 
-Redirect or proxy download URL: 
-This will provide the file directly specified, proxy decompressed if it comes from an archive.
+Redirect or proxy download URL:  
+This will provide the file directly specified, proxy decompressed if it comes from an archive.  
 /v1/{type}/{id}/download  
 
 
