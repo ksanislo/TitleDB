@@ -4,17 +4,11 @@
 
 3DS Homebrew Title Database
 
-API: https://api.titledb.com/v0/
-
-Interface accepts json via POST, and provides simplified
-interaction with GET. Multiple commands may be combined as a list.
+API: https://api.titledb.com/
 
 You must provide a User-Agent header with your request
 (e.g. httpcAddRequestHeaderField(&context, (char*)"User-Agent", (char*)"Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 YourAppName/1.4.13"); )
 Please try to make it unique to your application.
-
-Consider the current (v0) API implementation to be unstable, it may change
-without notice until the primary features are fully implemented.
 
 If you use this your project, please include a mention including the website name,
 stylized as TitleDB.com or link back to the main website, whichever is applicable.
@@ -22,27 +16,6 @@ stylized as TitleDB.com or link back to the main website, whichever is applicabl
 Contact me on reddit as /u/codepoet82 or ken(a)intherack.com if you have any
 questions, or would like to help somehow. Particularly, assistance from
 someone who knows JS/HTML/CSS is desperately needed!
-
-
-----
-
-The default GET is equivelent to a POST of:
-{ "action": "list", "fields": ["name", "description", "author", "titleid", "url"] }
-
-Some example GET commands are:
-https://api.titledb.com/v0/redirect/<TITLEID> will auto-redirect to the current url for the requested title ID.
-https://api.titledb.com/v0/proxy/<TITLEID> will either redirect or proxy-extract from an archive as required.
-https://api.titledb.com/images/<TITLEID>.png will provide the 'icon_large' field decoded and converted to a .png
-
-
-Some example JSON commands that can be used are:
-{ "action": "list_fields" }
-{ "action": "list", "fields": ["field1", "field2", ... ], "where": { "field": "value", ... } }
-{ "action": "add", "url": "http://example.com/installable.cia" }
-
-Binary data (currently just 'icon_large' and 'icon_small') is zlib compressed, then base64 encoded.
-
-Returns will all be JSON, failures will return with { "error": "Error description" }
 
 ----
 
