@@ -75,6 +75,7 @@ def main(global_config, **settings):
     config.add_route('submission_collection_v1', '/v1/submission')
 
     config.add_route('icon_image_v1', '/v1/{table:(cia|smdh)}/{id:\d+}/{field:icon_[sl]}.{format:(gif|png|jpg|jpeg|bmp)}')
+    config.add_route('download_v1', '/v1/{table:(cia|tdsx|arm9|smdh|xml)}/{id:\d+}/download')
 
     config.add_route('time_v1', '/v1/time')
     config.add_route('login_v1', '/v1/login')

@@ -353,7 +353,7 @@ class TitleDBViews:
             if cia:
                 return Response(pragma='public',cache_control='max-age=300',content_type='image/png',
                                 body=create_image_from_icondata(cia.icon_l, format='png'))
-        return dict(error='TitleID not found.')
+        return Response('404 Not Found', status='404 Not Found')
 
     @view_config(route_name='icon_image_v1')
     def icon_image(self):
@@ -395,6 +395,37 @@ class TitleDBViews:
                 else:
                     return HTTPFound(location=url.url)
         return dict(error='TitleID not found.')
+
+    @view_config(route_name='download_v1')
+    def proxy_or_redirect_download(self):
+        request = self.request
+        item_id = request.matchdict['id']
+        item_table = request.matchdict['table']
+        switcher = {"cia": CIA, "tdsx": TDSX, "arm9": ARM9, "smdh": SMDH, "xml": XML}
+        item = DBSession.query(switcher.get(item_table, None)).get(item_id)
+        if item:
+            if item.path:
+                # Verify cache file is there and valid.
+                if verify_cache(item):
+                    switcher = {
+                        "cia": mimetypes.guess_type('potato.cia'),
+                        "tdsx": mimetypes.guess_type('potato.3dsx'),
+                        "arm9": mimetypes.guess_type('potato.bin'),
+                        "smdh": mimetypes.guess_type('potato.smdh'),
+                        "xml": mimetypes.guess_type('potato.xml')
+                    }
+                    response = FileResponse(
+                               os.path.join(url_to_cache_path(item.url.url, request.registry.settings['titledb.cache']), 'archive_root', item.path),
+                               request=request,
+                               content_type=switcher.get(item_table, 'application/octet-stream')[0]
+                           )
+                    response.content_disposition = 'attachment; filename="%s"' % item.path.split('/')[-1]
+                    return response
+                else:
+                    return Response('404 Not Found', status='404 Not Found')
+            else:
+                return HTTPFound(location=item.url.url)
+        return Response('404 Not Found', status='404 Not Found')
 
     @view_config(route_name='time_v1')
     def time(self):
