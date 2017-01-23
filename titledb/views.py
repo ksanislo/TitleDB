@@ -284,6 +284,8 @@ class TitleDBViews:
                 submission = Submission(active=1)
                 submission.url = mydata['url']
                 submission.status = 'Waiting for URL processing daemon to become ready.'
+                if 'client_addr' in dir(submission):
+                    submission.client_addr = self.request.client_addr
                 DBSession.add(submission)
                 DBSession.flush()
                 self.request.render_schema = SubmissionSchema()
