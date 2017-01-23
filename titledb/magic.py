@@ -25,7 +25,6 @@ from .github import github_parse_user_repo
 from .models import (
     DBSession,
     URL,
-    URLSchema,
     Entry,
     ARM9,
     CIA,
@@ -100,22 +99,22 @@ def download_to_filename(r, filename):
 
         return(calculated_size, h.hexdigest())
 
-def process_url(url_string=None, url_id=None, cache_root=''):
-    if url_string:
-        url_string = url_string.split('#')[0]    # Remove any # target from the URL
+def process_url(item, settings=None):
+    """
+    This function can take either a URL object or a URL string, 
+    and will add or update listings for any relevent contents of 
+    what it finds from the internet.
+    """
+    if isinstance(item, str):
+        url_string = item.split('#')[0]    # Remove any # target from the URL
         item = DBSession.query(URL).filter_by(url=url_string).first()
         if not item:
             item = URL(url=url_string)
-    elif url_id:
-        item = DBSession.query(URL).get(url_id)
-        if not item:
-            return None
-    else:
-        return None
 
     headers = dict()
     headers['User-Agent'] = 'Mozilla/5.0 (Nintendo 3DS; Mobile; rv:10.0) Gecko/20100101 TitleDB/1.0'
 
+    cache_root = settings['titledb.cache']
     cache_path = url_to_cache_path(item.url, cache_root)
 
     if item.filename and item.sha256 and item.sha256 == checksum_sha256(os.path.join(cache_path, item.filename)):
@@ -129,12 +128,11 @@ def process_url(url_string=None, url_id=None, cache_root=''):
     except requests.exceptions.RequestException:
         return None
 
-	# GitHub release "archive" fail to properly report as 304, but we can fake it.
+    # GitHub release "archive" fail to properly report as 304, but we can fake it.
     if r.status_code == 200 and 'etag' in r.headers and item.etag == r.headers['etag'] \
         and ('If-None-Match' in headers or 'If-Modified-Since' in headers):
         r.status_code = 304
 
-    #subitems = []
     results = None
     if r.status_code == 200:
         item.version = find_version_in_string(item.url)
@@ -182,10 +180,6 @@ def process_url(url_string=None, url_id=None, cache_root=''):
         if action:
             relatives = find_item_relatives(item)
             results = action(item, relatives, cache_path)
-        #    if results:
-        #        item.active = True
-        #else:
-        #    item.active = False
 
     elif not r.status_code == 304:
         item.active = False
@@ -244,7 +238,7 @@ def process_url(url_string=None, url_id=None, cache_root=''):
                     DBSession.add(result_item)
 
     DBSession.flush()
-    return URLSchema().dump(item).data
+    return item
 
 def find_or_fill_entry(results, relatives=None):
     """
@@ -532,7 +526,7 @@ def find_or_fill_generic(cls, parent, relatives, cache_path, archive_path=None):
                 relative_assets_ids.append(relative.assets_id)
 
             # Try to find an exact match for this file in our relatives.
-            if relative.__class__ == item.__class__ and item.path and relative.path and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
+            if relative.__class__ == item.__class__ and item.path and relative.path and item.version and relative.version and item.path.replace(item.version, '') == relative.path.replace(relative.version, ''):
                 item.entry_id = relative.entry_id
                 item.assets_id = relative.assets_id
 

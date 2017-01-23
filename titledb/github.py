@@ -14,7 +14,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def github_full_scan(cache_root=None):
+def github_full_scan(settings=None):
     url_like = 'https://github.com/%/releases/download/%'
     urls = DBSession.query(URL).filter_by(active=True).filter(URL.url.like(url_like)).all()
 
@@ -41,7 +41,7 @@ def github_full_scan(cache_root=None):
                 try:
                     with transaction.manager:
                         with DBSession.begin_nested():
-                            titledb.magic.process_url(asset['browser_download_url'], cache_root=cache_root)
+                            titledb.magic.process_url(asset['browser_download_url'], settings=settings)
                             #transaction.commit()
                 except:
                     transaction.rollback()

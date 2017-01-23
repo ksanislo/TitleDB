@@ -35,15 +35,15 @@ def usage(argv):
           '(example: "%s development.ini")' % (cmd, cmd))
     sys.exit(1)
 
-def action_add(settings, url):
+def action_add(settings, url_string):
     with transaction.manager:
-        url_info = process_url(url,cache_root=settings['titledb.cache'])
+        url = process_url(url_string,settings=settings)
     
 def action_cron(settings, args):
-    process_submission_queue(cache_root=settings['titledb.cache'])
+    process_submission_queue(settings=settings)
 
 def action_github(settings, args):
-    github_full_scan(cache_root=settings['titledb.cache'])
+    github_full_scan(settings=settings)
 
 def action_none(settings, url):
     None

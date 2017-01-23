@@ -124,9 +124,9 @@ class BaseView(object):
             if request.matched_route.name == self.item_route:
                 # Set the active_schema for items
                 if not self.nested_cls or (self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true'):
-                    self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
-                else:
                     self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
+                else:
+                    self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
             else:
                 # Set the active_schema for lists
                 if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
@@ -383,7 +383,7 @@ class TitleDBViews:
             if cia:
                 if cia.path:
                     # Verify cache file is there and valid.
-                    if verify_cache(cia):
+                    if verify_cache(cia, settings=request.registry.settings):
                         return FileResponse(
                                    os.path.join(url_to_cache_path(cia.url.url, request.registry.settings['titledb.cache']), 'archive_root', cia.path),
                                    request=request,
@@ -405,7 +405,7 @@ class TitleDBViews:
         if item:
             if item.path:
                 # Verify cache file is there and valid.
-                if verify_cache(item):
+                if verify_cache(item, settings=request.registry.settings):
                     filename = item.path.split('/')[-1]
                     response = FileResponse(
                                os.path.join(url_to_cache_path(item.url.url, request.registry.settings['titledb.cache']), 'archive_root', item.path),
