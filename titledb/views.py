@@ -123,10 +123,10 @@ class BaseView(object):
         if self.request.method == 'GET':
             if request.matched_route.name == self.item_route:
                 # Set the active_schema for items
-                if not self.nested_cls or (self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true'):
-                    self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
-                else:
+                if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
                     self.active_schema = self.nested_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
+                else:
+                    self.active_schema = self.schema_cls(exclude=self.request.GET.getall('exclude'),only=self.request.GET.getall('only'))
             else:
                 # Set the active_schema for lists
                 if self.nested_cls and self.request.GET.get('nested') and self.request.GET.get('nested').lower() == 'true':
