@@ -171,9 +171,28 @@ class BaseView(object):
             return TitleDBViews.forbidden(self)
 
     def list_items(self):
-        data = DBSession.query(self.item_cls).filter(self.item_cls.active == True).all()
+        page = self.request.GET.get('_page')
+        perpage = self.request.GET.get('_perPage')
+        sortfield = self.request.GET.get('_sortField')
+        sortdir = self.request.GET.get('_sortDir')
+
+        data = DBSession.query(self.item_cls).filter(self.item_cls.active == True)
+
+        if sortfield and sortfield in self.active_schema.declared_fields:
+            if sortdir and sortdir.lower() in ('asc','desc'):
+                sortfield = sortfield + ' ' + sortdir
+            data = data.order_by(sortfield)
+
+        if page:
+            if not perpage: perpage = 20
+            data = data.offset((int(page)-1)*int(perpage)).limit(int(perpage))
+
         self.request.render_schema = self.active_schema
-        return data
+
+        total = int(DBSession.query(self.item_cls).count())
+        self.request.response.headers['X-Total-Count'] = str(total)
+        self.request.response.headers['Access-Control-Expose-Headers'] = 'X-Total-Count'
+        return data.all()
 
     def read_item(self):
         self.request.render_schema = self.active_schema
