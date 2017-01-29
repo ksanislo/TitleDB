@@ -74,7 +74,7 @@ from time import (
 )
 
 from datetime import datetime
-from urllib import parse
+from urllib.parse import unquote_plus
 from collections import OrderedDict
 
 from sqlalchemy.sql import ( select, func, cast, and_ )
@@ -175,8 +175,12 @@ class BaseView(object):
         perpage = self.request.GET.get('_perPage')
         sortfield = self.request.GET.get('_sortField')
         sortdir = self.request.GET.get('_sortDir')
-
+        filters = self.request.GET.get('_filters')
         data = DBSession.query(self.item_cls).filter(self.item_cls.active == True)
+
+        if filters: # Unquote and decode JSON 
+            filters = json.loads(unquote_plus(filters))
+            data = data.filter_by(**filters)
 
         if sortfield and sortfield in self.active_schema.declared_fields:
             if sortdir and sortdir.lower() in ('asc','desc'):
