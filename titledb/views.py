@@ -180,7 +180,35 @@ class BaseView(object):
 
         if filters: # Unquote and decode JSON 
             filters = json.loads(unquote_plus(filters))
-            data = data.filter_by(**filters)
+            #data = data.filter_by(**filters)
+            for each in filters:
+                if each in self.active_schema.declared_fields: 
+                    exec("self.filter_obj = self.item_cls."+each)
+                    if isinstance(filters[each], dict):
+                        for oper in filters[each]:
+                            loper = oper.lower()
+                            if loper in ('=','==','eq'):
+                                data = data.filter(self.filter_obj == filters[each][oper])
+                            elif loper in ('>','gt'):
+                                data = data.filter(self.filter_obj > filters[each][oper])
+                            elif loper in ('<','lt'):
+                                data = data.filter(self.filter_obj < filters[each][oper])
+                            elif loper in ('>=','gte','ge'):
+                                data = data.filter(self.filter_obj >= filters[each][oper])
+                            elif loper in ('<=','lte','le'):
+                                data = data.filter(self.filter_obj <= filters[each][oper])
+                            elif loper in ('!=','not','ne',):
+                                data = data.filter(self.filter_obj != filters[each][oper])
+                            elif loper in ('~','re','regex','regexp'):
+                                data = data.filter(self.filter_obj.op('regexp')(filters[each][oper]))
+                            elif loper in ('%','like'):
+                                data = data.filter(self.filter_obj.like(filters[each][oper]))
+
+                    elif isinstance(filters[each], list):
+                        data = data.filter(self.filter_obj.in_(filters[each]))
+
+                    else:
+                        data = data.filter(self.filter_obj == filters[each])
 
         if sortfield and sortfield in self.active_schema.declared_fields:
             if sortdir and sortdir.lower() in ('asc','desc'):
