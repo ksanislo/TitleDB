@@ -180,9 +180,8 @@ class BaseView(object):
 
         if filters: # Unquote and decode JSON 
             filters = json.loads(unquote_plus(filters))
-            #data = data.filter_by(**filters)
             for each in filters:
-                if each in self.active_schema.declared_fields: 
+                if each in self.active_schema.declared_fields:
                     exec("self.filter_obj = self.item_cls."+each)
                     if isinstance(filters[each], dict):
                         for oper in filters[each]:
