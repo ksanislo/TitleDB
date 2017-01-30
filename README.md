@@ -7,7 +7,7 @@ TitleDB.com API rewritten as a proper Python WSGI application.
 
 The API is a RESTful interface which provides a listing service of 3DS homebrew in a variety of formats avaliable around the internet. 
 Sets of data are interconnected by foreign keys following a naming pattern of *_id, which correspond to the id in the matching table. 
-Specifc items can be located by id number directly, as /{type}/{id}
+Specific items can be located by id number directly, as /{type}/{id}.
 
 File collections:  
 /cia  
@@ -30,7 +30,7 @@ Any file items can be downloaded directly via TitleDB's proxy decompression as:
 /{type}/{id}/download  
 This will provide the listed file itself. This is best to use for making into QR codes, as FBI can use this to install a .cia directly.
 
-# Adding new homebrew
+# Adding new homebrew  
 The only globally allowed PUT is on /submission, if you send a JSON body of {"url":"https://path.to/some/homebrew.zip"} the new entry will be created, and you can follow the processing via the returned submission id.  
 
 
