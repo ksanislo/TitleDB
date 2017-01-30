@@ -16,7 +16,7 @@ File collections:
 /xml  
 /arm9  
 
-Object collections:
+Object collections:  
 /entry  
 /category  
 /assets  
@@ -31,8 +31,8 @@ Any file items can be downloaded directly via TitleDB's proxy decompression as:
 This will provide the listed file itself. This is best to use for making into QR codes, as FBI can use this to install a .cia directly.
 
 # Filtering views
-You can change the results of collections with some basic filtering parameters (e.g. /cia?_page=2&_perPage=20 )
-_page: Which page view you would like, instead of everything.
+You can change the results of collections with some basic filtering parameters (e.g. /cia?_page=2&_perPage=20 )  
+_page: Which page view you would like, instead of everything.  
 
 _perPage: When used with a _page, for how many results per page are displayed.
 
