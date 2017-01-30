@@ -11,7 +11,6 @@ import transaction
 def process_submission_queue(settings=None):
     with transaction.manager:
         submissions = DBSession.query(Submission).filter_by(active=True).all()
-        import pdb; pdb.set_trace()
         for submission in submissions:
             result = None
             if submission.url:
