@@ -30,6 +30,10 @@ Any file items can be downloaded directly via TitleDB's proxy decompression as:
 /{type}/{id}/download  
 This will provide the listed file itself. This is best to use for making into QR codes, as FBI can use this to install a .cia directly.
 
+# Adding new homebrew
+The only globally allowed PUT is on /submission, if you send a JSON body of {"url":"https://path.to/some/homebrew.zip"} the new entry will be created, and you can follow the processing via the returned submission id.  
+
+
 # Filtering views
 You can change the results of collections with some basic filtering parameters (e.g. /cia?_page=2&_perPage=20 )  
 _page: Which page view you would like, instead of everything.  
