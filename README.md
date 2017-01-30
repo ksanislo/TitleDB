@@ -20,8 +20,8 @@ Object collections:
 /entry  
 /category  
 /assets  
-/url
-/submission
+/url  
+/submission  
 
 For cia and smdh, you can generate an icon of the specified format. You can specify png, gif, jpg, bmp, or bin (3DS GPU native):  
 /{type}/{id}/{field}.{format} (eg. /cia/44/icon_l.png or /smdh/7/icon_s.bin)  
