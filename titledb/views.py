@@ -93,11 +93,15 @@ class register_views(object):
                 request_method='PUT', route_name=self.route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='delete_item',
                 request_method='DELETE', route_name=self.route, permission='super')(cls)
+            cls = view_config(_depth=1, renderer='json', attr='options_info',
+                request_method='OPTIONS', route_name=self.route)(cls)
         if self.collection_route:
             cls = view_config(_depth=1, renderer='json', attr='list_items',
                 request_method='GET', route_name=self.collection_route)(cls)
             cls = view_config(_depth=1, renderer='json', attr='create_item',
                 request_method='POST', route_name=self.collection_route)(cls)
+            cls = view_config(_depth=1, renderer='json', attr='options_info',
+                request_method='OPTIONS', route_name=self.collection_route)(cls)
         return cls
 
 
@@ -245,6 +249,11 @@ class BaseView(object):
         DBSession.delete(self.item)
         return Response(
             status='202 Accepted',
+            content_type='application/json; charset=UTF-8')
+
+    def options_info(self):
+        return Response(
+            status='200 OK',
             content_type='application/json; charset=UTF-8')
 
 

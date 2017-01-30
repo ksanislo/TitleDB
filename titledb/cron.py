@@ -11,13 +11,17 @@ import transaction
 def process_submission_queue(settings=None):
     with transaction.manager:
         submissions = DBSession.query(Submission).filter_by(active=True).all()
+        import pdb; pdb.set_trace()
         for submission in submissions:
+            result = None
             if submission.url:
                 try:
-                    result = process_url(submission.url, settings=settings)
+                    with DBSession.begin_nested():
+                        result = process_url(submission.url, settings=settings)
                 except:
-                    DBSession.rollback()
+                    None
 
-            submission.status = json.dumps(URLSchema().dump(result).data)
+            if result:
+                submission.status = json.dumps(URLSchema().dump(result).data)
             submission.active = False
     
