@@ -3,7 +3,7 @@
 TitleDB.com API rewritten as a proper Python WSGI application. 
 
 
-*API Base URL*: https://3ds.titledb.com/v1/  
+### API Base URL: https://3ds.titledb.com/v1/  
 
 The API is a RESTful interface which provides a listing service of 3DS homebrew in a variety of formats avaliable around the internet. 
 Sets of data are interconnected by foreign keys following a naming pattern of *_id, which correspond to the id in the matching table. 
