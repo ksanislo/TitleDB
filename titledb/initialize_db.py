@@ -13,6 +13,7 @@ from pyramid.paster import (
 from .models import (
     DBSession,
     Category,
+    Status,
     CIA,
     TDSX,
     Entry,
@@ -53,6 +54,12 @@ def main(argv=sys.argv):
     with transaction.manager:
         categories = json.load(open("categories.json"))
         for category in categories:
-            categorymodel = Category(name=category)
+            categorymodel = Category(active=True,name=category)
             DBSession.add(categorymodel)
+
+    with transaction.manager:
+        statuses = json.load(open("statuses.json"))
+        for status in statuses:
+            statusmodel = Status(active=True,name=status)
+            DBSession.add(statusmodel)
 

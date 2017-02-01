@@ -306,11 +306,34 @@ class AssetsSchemaModerator(AssetsSchema):
         exclude = ['created_at','updated_at']
         dump_only = ['version','size','mtime','path','sha256']
 
+class Screenshot(FileBase):
+    __tablename__ = 'screenshot'
+    entry_id = Column(Integer, ForeignKey('entry.id'))
+    entry = relationship('Entry')
+
+class ScreenshotSchema(FileSchema):
+    entry_id = fields.Integer()
+
+class ScreenshotSchemaNested(FileSchemaNested, ScreenshotSchema):
+    entry_id = fields.Integer(load_only=True)
+    entry = fields.Nested('EntrySchemaNested', many=False, exclude=['cia','tdsx','arm9'])
+
 class Category(GenericBase):
     __tablename__ = 'category'
     name = Column(String(128))
 
 class CategorySchema(RenderSchema):
+    id = fields.Integer(dump_only=True)
+    name = fields.String()
+    active = fields.Bool()
+    created_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
+    updated_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ', dump_only=True)
+
+class Status(GenericBase):
+    __tablename__ = 'status'
+    name = Column(String(128))
+
+class StatusSchema(RenderSchema):
     id = fields.Integer(dump_only=True)
     name = fields.String()
     active = fields.Bool()
