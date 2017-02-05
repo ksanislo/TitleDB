@@ -2,14 +2,14 @@ var myApp = angular.module('myApp', ['ng-admin']);
 myApp.config(['NgAdminConfigurationProvider', function (nga) {
     // create an admin application
     var admin = nga.application('TitleDB')
-      .baseApiUrl('https://api.titledb.com/v1/'); // main API endpoint
+      .baseApiUrl('https://3ds.titledb.com/v1/'); // production API endpoint
+      //.baseApiUrl('http://192.168.42.20:6543/v1/'); // development API endpoint
     // create a user entity
     // the API endpoint for this entity will be 'http://dev.titledb.com/v1/entry/:id
     var entry = nga.entity('entry');
     // set the fields of the user entity list view
     entry.listView().fields([
         nga.field('id'),
-        nga.field('active'),
         nga.field('name'),
         nga.field('author'),
         nga.field('headline'),
@@ -18,7 +18,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
 
      entry.showView().fields([
         nga.field('id'),
-        nga.field('active'),
+        nga.field('active', 'boolean'),
         nga.field('name'),
         nga.field('author'),
         nga.field('headline'),
@@ -114,9 +114,8 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .validation({ required: true }),
         nga.field('headline')
             .validation({ required: true }),
-        nga.field('description', 'wysiwyg')
-            .validation({ required: true })
-            .stripTags(true),
+        nga.field('description', 'text')
+            .validation({ required: true }),
         nga.field('url')
             .validation({ required: true }),
         nga.field('category_id', 'reference')
@@ -144,7 +143,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
 
     cia.showView().fields([
         nga.field('id'),
-        nga.field('active'),
+        nga.field('active', 'boolean'),
         nga.field('version'),
         nga.field('size'),
         nga.field('mtime'),
@@ -168,6 +167,42 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('publisher'),
         nga.field('created_at'),
         nga.field('updated_at')
+     ]);
+
+     cia.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+            .validation({ required: true }),
+        nga.field('version'),
+        nga.field('size').editable(false),
+        nga.field('mtime').editable(false),
+        nga.field('path').editable(false),
+        nga.field('sha256').editable(false),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL')
+            .editable(false),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
+        nga.field('assets_id', 'reference')
+            .targetEntity(nga.entity('assets'))
+            .targetField(nga.field('id'))
+            .label('Assets')
+            .remoteComplete(false)
+            .sortField('id')
+            .perPage(5000),
+        nga.field('titleid').editable(false),
+        nga.field('name_s').editable(false),
+        nga.field('name_l').editable(false),
+        nga.field('publisher').editable(false),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false)
      ]);
     // add the user entity to the admin application
     admin.addEntity(cia);
@@ -215,6 +250,52 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('created_at'),
         nga.field('updated_at')
      ]);
+
+     tdsx.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+            .validation({ required: true }),
+        nga.field('version'),
+        nga.field('size').editable(false),
+        nga.field('mtime').editable(false),
+        nga.field('path').editable(false),
+        nga.field('sha256').editable(false),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL')
+            .editable(false),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
+        nga.field('smdh_id', 'reference')
+            .targetEntity(nga.entity('smdh'))
+            .targetField(nga.field('path'))
+            .label('SMDH')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
+        nga.field('xml_id', 'reference')
+            .targetEntity(nga.entity('xml'))
+            .targetField(nga.field('path'))
+            .label('XML')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
+        nga.field('assets_id', 'reference')
+            .targetEntity(nga.entity('assets'))
+            .targetField(nga.field('id'))
+            .label('Assets')
+            .remoteComplete(false)
+            .sortField('id')
+            .perPage(5000),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false)
+     ]);
     // add the user entity to the admin application
     admin.addEntity(tdsx);
 
@@ -252,6 +333,32 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
                 nga.field('version')
             ])
     ]);
+
+    smdh.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+            .validation({ required: true }),
+        nga.field('version'),
+        nga.field('size').editable(false),
+        nga.field('mtime').editable(false),
+        nga.field('path').editable(false),
+        nga.field('sha256').editable(false),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL')
+            .editable(false),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false),
+        nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('smdh_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+    ]);
     // add the user entity to the admin application
     admin.addEntity(smdh);
 
@@ -280,6 +387,32 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .label('URL'),
         nga.field('created_at'),
         nga.field('updated_at'),
+        nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('xml_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+    ]);
+
+    xml.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+            .validation({ required: true }),
+        nga.field('version'),
+        nga.field('size').editable(false),
+        nga.field('mtime').editable(false),
+        nga.field('path').editable(false),
+        nga.field('sha256').editable(false),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL')
+            .editable(false),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false),
         nga.field('tdsx', 'referenced_list')
             .targetEntity(nga.entity('tdsx'))
             .targetReferenceField('xml_id')
@@ -327,6 +460,38 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('created_at'),
         nga.field('updated_at')
      ]);
+
+     arm9.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+            .validation({ required: true }),
+        nga.field('version'),
+        nga.field('size').editable(false),
+        nga.field('mtime').editable(false),
+        nga.field('path').editable(false),
+        nga.field('sha256').editable(false),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL')
+            .editable(false),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
+        nga.field('assets_id', 'reference')
+            .targetEntity(nga.entity('assets'))
+            .targetField(nga.field('id'))
+            .label('Assets')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false)
+     ]);
     // add the user entity to the admin application
     admin.addEntity(arm9);
 
@@ -353,6 +518,33 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
                 nga.field('headline')
             ])
      ]);
+
+     category.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+           .validation({ required: true }),
+        nga.field('name')
+           .validation({ required: true }),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false),
+        nga.field('entry', 'referenced_list')
+            .targetEntity(nga.entity('entry'))
+            .targetReferenceField('category_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name'),
+                nga.field('author'),
+                nga.field('headline')
+            ])
+     ]);
+
+     category.creationView().fields([
+        nga.field('active', 'boolean')
+            .validation({ required: true })
+            .defaultValue(true),
+        nga.field('name')
+            .validation({ required: true })
+     ]);
     // add the user entity to the admin application
     admin.addEntity(category);
 
@@ -378,6 +570,63 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('etag'),
         nga.field('created_at'),
         nga.field('updated_at'),
+        nga.field('cia', 'referenced_list')
+            .targetEntity(nga.entity('cia'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name_s'),
+                nga.field('titleid'),
+                nga.field('version')
+            ]),
+         nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('smdh', 'referenced_list')
+            .targetEntity(nga.entity('smdh'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('xml', 'referenced_list')
+            .targetEntity(nga.entity('xml'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('arm9', 'referenced_list')
+            .targetEntity(nga.entity('arm9'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+      ]);
+
+     url.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+           .validation({ required: true }),
+        nga.field('version'),
+        nga.field('size').editable(false),
+        nga.field('mtime').editable(false),
+        nga.field('filename').editable(false),
+        nga.field('sha256').editable(false),
+        nga.field('url').editable(false),
+        nga.field('content_type').editable(false),
+        nga.field('etag').editable(false),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false),
         nga.field('cia', 'referenced_list')
             .targetEntity(nga.entity('cia'))
             .targetReferenceField('url_id')

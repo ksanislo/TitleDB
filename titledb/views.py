@@ -145,7 +145,7 @@ class BaseView(object):
             elif not self.moderator_cls and self.request.method == 'PUT' and 'group:mod' in self.request.effective_principals:
                 all_fields = list(self.schema_cls._declared_fields.keys())
                 # Allow moderators to toggle "active" and edit some *_id fields by default
-                mod_allowed=['active','assets_id','entry_id','smdh_id','xml_id']
+                mod_allowed=['active','version','assets_id','entry_id','smdh_id','xml_id']
                 self.active_schema = self.schema_cls(dump_only=[x for x in all_fields if x not in mod_allowed])
             elif self.everyone_cls and self.request.method == 'POST':
                 self.active_schema = self.everyone_cls()

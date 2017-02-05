@@ -64,10 +64,10 @@ class FileBase(GenericBase, AbstractConcreteBase):
         return relationship('URL')
 
 class FileSchema(GenericSchema):
-    version = fields.String()
+    version = fields.String(allow_none=True)
     size = fields.Integer()
     mtime = fields.DateTime(format='%Y-%m-%dT%H:%M:%SZ')
-    path = fields.String()
+    path = fields.String(allow_none=True)
     sha256 = fields.String()
     url_id = fields.Integer()
 
@@ -162,7 +162,7 @@ class CIA(FileBase):
 
 class CIASchema(FileSchema):
     entry_id = fields.Integer()
-    assets_id = fields.Integer()
+    assets_id = fields.Integer(allow_none=True)
     titleid = fields.String()
     name_s = fields.String()
     name_l = fields.String()
@@ -220,9 +220,9 @@ class TDSX(FileBase):
 
 class TDSXSchema(FileSchema):
     entry_id = fields.Integer()
-    smdh_id = fields.Integer()
-    xml_id = fields.Integer()
-    assets_id = fields.Integer()
+    smdh_id = fields.Integer(allow_none=True)
+    xml_id = fields.Integer(allow_none=True)
+    assets_id = fields.Integer(allow_none=True)
 
 class TDSXSchemaNested(FileSchemaNested, TDSXSchema):
     entry_id = fields.Integer(load_only=True)
@@ -274,7 +274,7 @@ class ARM9(FileBase):
 
 class ARM9Schema(FileSchema):
     entry_id = fields.Integer()
-    assets_id = fields.Integer()
+    assets_id = fields.Integer(allow_none=True)
 
 class ARM9SchemaNested(FileSchemaNested, ARM9Schema):
     entry_id = fields.Integer(load_only=True)
