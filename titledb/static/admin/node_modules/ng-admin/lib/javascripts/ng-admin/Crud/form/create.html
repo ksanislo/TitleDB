@@ -1,0 +1,27 @@
+<div class="row">
+    <div class="col-lg-12">
+        <div class="page-header">
+            <ma-view-actions override="::formController.actions" entry="entry" entity="::formController.entity">
+                <ma-list-button ng-if="::entity.listView().enabled" entity="::entity"></ma-list-button>
+            </ma-view-actions>
+            <h1 compile="::formController.title">
+                {{ 'CREATE_NEW' | translate }} {{ ::formController.view.entity.label() | humanize:true | singularize | translate }}
+            </h1>
+            <p class="lead" ng-if="::formController.description" compile="::formController.description">{{ ::formController.description }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="create-view" ng-class="::'ng-admin-entity-' + formController.entity.name()">
+    <form class="col-lg-12 form-horizontal" name="formController.form" ng-submit="formController.submitCreation($event)">
+        <div ng-repeat="field in ::formController.fields track by $index" compile="::field.getTemplateValueWithLabel(entry)">
+            <ma-field field="::field" value="entry.values[field.name()]" entry="entry" entity="::entity" form="formController.form" datastore="::formController.dataStore"></ma-field>
+        </div>
+
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <ma-submit-button label="SUBMIT"></ma-submit-button>
+            </div>
+        </div>
+    </form>
+</div>

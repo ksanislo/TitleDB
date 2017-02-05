@@ -1,0 +1,218 @@
+'use strict';
+
+/*global describe,it,expect,$$,element,browser,by*/
+describe('List filter', function () {
+    'use strict';
+
+    var hasToLoad = true;
+    beforeEach(function () {
+        if (hasToLoad) {
+            browser.get(browser.baseUrl + '#/comments/list');
+        }
+        hasToLoad = true;
+    });
+
+    describe('layout', function () {
+        it('should display pinned filters by default in the listview', function () {
+            $$('.filters .filter input').then(function (inputs) {
+                expect(inputs.length).toBe(1); // Only text filter is pinned
+                expect(inputs[0].getAttribute('placeholder')).toBe('Search');
+            });
+            hasToLoad = false;
+        });
+        it('should display a filter button for adding new filters', function () {
+            return $$('ma-view-actions button').then(function (buttons) {
+                expect(buttons[0].getText()).toBe(' Add filter ');
+            });
+        });
+    });
+
+    describe('filter button', function () {
+        it('should display a list of filters when clicked', function () {
+            element(by.css('ma-filter-button button')).click();
+            $$('ma-filter-button ul').then(function (element) {
+                expect(element[0].getCssValue('display')).toBe('block');
+            });
+            $$('ma-filter-button ul li').then(function (elements) {
+                expect(elements.length).toBe(2);
+                expect(elements[0].getText()).toBe('Posted');
+                expect(elements[1].getText()).toBe('Post');
+            });
+            hasToLoad = false;
+        });
+        it('should add a filter when filter name is clicked', function () {
+            $$('ma-filter-button ul li:nth-child(1) a').click();
+            $$('.filters .filter input').then(function (inputs) {
+                expect(inputs.length).toBe(2);
+                expect(inputs[1].getAttribute('placeholder')).toBe('Filter by date');
+            });
+            hasToLoad = false;
+        });
+        it('should hide the list of filters once clicked', function () {
+            $$('ma-filter-button ul').then(function (element) {
+                expect(element[0].getCssValue('display')).toBe('none');
+            });
+            hasToLoad = false;
+        });
+        it('should reduce the number of filters in the dropdown once clicked', function () {
+            element(by.css('ma-filter-button button')).click();
+            $$('ma-filter-button ul').then(function (element) {
+                expect(element[0].getCssValue('display')).toBe('block');
+            });
+            $$('ma-filter-button ul li').then(function (elements) {
+                expect(elements.length).toBe(1);
+                expect(elements[0].getText()).toBe('Post');
+            });
+            hasToLoad = false;
+        });
+        it('should disappear if all filters were added', function () {
+            element(by.css('ma-filter-button ul li:nth-child(1) a')).click();
+            $$('.filters .filter input').then(function (inputs) {
+                expect(inputs.length).toBe(4); // Post is autocomplete, so it has 2 inputs
+            });
+            $$('ma-filter-button ul').then(function (elements) {
+                expect(elements.length).toBe(0);
+            });
+            hasToLoad = false;
+        });
+        it('should reappear once an unpinned filter is removed', function () {
+            element(by.css('.filters .filter:nth-child(3) .remove_filter a')).click();
+            $$('ma-filter-button ul').then(function (elements) {
+                expect(elements.length).not.toBe(0);
+            });
+            element(by.css('ma-filter-button button')).click();
+            $$('ma-filter-button ul li').then(function (elements) {
+                expect(elements.length).toBe(1);
+                expect(elements[0].getText()).toBe('Post');
+            });
+        });
+    });
+
+    describe('text filter', function () {
+        it('should filter globally', function () {
+            // Filter globally for 'rabbit'
+            $$('.filters .filter:nth-child(1) input').sendKeys('rabbit').then(function () {
+                return browser.driver.sleep(600); // debounce delay
+            }).then(function () {
+                return $$('.grid tr td:nth-child(4)');
+            }).then(function (tdElements) {
+                expect(tdElements.length).toBe(1);
+                expect(tdElements[0].getText()).toBe('White Rabbit: it was indeed: she was out of the gr...');
+            });
+            hasToLoad = false;
+        });
+
+        it('should update the pagination total', function () {
+            $$('ma-datagrid-pagination .total').then(function (totalElements) {
+                expect(totalElements[0].getText()).toBe('1 - 1 of 1');
+            });
+            hasToLoad = false;
+        });
+
+        it('should not filter when empty', function () {
+            $$('.filters .filter:nth-child(1) input').clear().then(function () {
+                return browser.driver.sleep(600); // debounce delay
+            }).then(function () {
+                return $$('.grid tr td:nth-child(4)');
+            }).then(function (tdElements) {
+                expect(tdElements.length).toBe(10);
+            });
+        });
+    });
+
+    describe('reference filter', function () {
+        it('should filter on reference', function () {
+            $$('ma-filter-button button').click();
+            $$('ma-filter-button ul li:nth-child(2) a').click();
+            // Filter on post_id '3' (Perspiciatis adipisci vero qui ipsam iure porro)
+            $$('.filters .ui-select-placeholder').click();
+            $$('#ui-select-choices-row-0-2').click();
+            browser.driver.sleep(600); // debounce delay
+            $$('.grid tr td:nth-child(4)').then(function (tdElements) {
+                expect(tdElements.length).toBe(2);
+                expect(tdElements[0].getText()).toBe('I\'d been the whiting,\' said the Hatter, it woke up...');
+                expect(tdElements[1].getText()).toBe('I\'m not Ada,\' she said, \'and see whether it\'s mark...');
+            });
+            hasToLoad = false;
+        });
+
+        it('should update the pagination total', function () {
+            $$('ma-datagrid-pagination .total').then(function (totalElements) {
+                expect(totalElements[0].getText()).toBe('1 - 2 of 2');
+            });
+        });
+    });
+
+    describe('filter choice conflict', function () {
+
+        beforeEach(function () {
+            if (hasToLoad) {
+                browser.get(browser.baseUrl + '#/posts/list');
+            }
+            hasToLoad = true;
+        });
+
+        var addFilter = function addFilter(name) {
+            return function () {
+                return element(by.css('ma-filter-button')).click().then(function () {
+                    return element(by.linkText(name)).click();
+                });
+            };
+        };
+
+        var removeFilter = function removeFilter(name) {
+            return function () {
+                return element(by.css('.filter.' + name + ' .remove_filter')).click();
+            };
+        };
+
+        var getChoices = function getChoices(name) {
+            return function () {
+                return element(by.css('.filter.' + name)).click().then(function () {
+                    return element.all(by.css('.filter.' + name + ' .ui-select-choices-row')).getText();
+                });
+            };
+        };
+
+        it('should not mix filter choices when adding two filter and then deleting the first', function () {
+            addFilter('Category')().then(getChoices('category')).then(function (categoryChoices) {
+                return expect(categoryChoices).toEqual(['Tech', 'Lifestyle']);
+            }).then(addFilter('Subcategory')).then(getChoices('subcategory')).then(function (subCategoryChoices) {
+                return expect(subCategoryChoices).toEqual(['Computers', 'Gadgets', 'Travel', 'Fitness']);
+            }).then(removeFilter('category')).then(getChoices('subcategory')).then(function (subCategoryChoices) {
+                return expect(subCategoryChoices).toEqual(['Computers', 'Gadgets', 'Travel', 'Fitness']);
+            });
+        });
+    });
+
+    describe('interaction with pagination', function () {
+        it('should reset page number', function () {
+            // Filter globally for 'I'
+            $$('.filters .filter:nth-child(1) input').sendKeys('I').then(function () {
+                return browser.driver.sleep(600); // debounce delay
+            }).then(function () {
+                return $$('ma-datagrid-pagination .total');
+            }).then(function (totalElements) {
+                expect(totalElements[0].getText()).toBe('1 - 10 of 11');
+            }).then(function () {
+                return $$('ma-datagrid-pagination li:nth-child(3) a').click();
+            }).then(function () {
+                return $$('ma-datagrid-pagination .total');
+            }).then(function (totalElements) {
+                expect(totalElements[0].getText()).toBe('11 - 11 of 11');
+            }).then(function () {
+                return $$('.filters .filter:nth-child(1) input').clear();
+            }).then(function () {
+                // Filter globally for 'be'
+                return $$('.filters .filter:nth-child(1) input').sendKeys('be');
+            }).then(function () {
+                return browser.driver.sleep(600); // debounce delay
+            }).then(function () {
+                return $$('ma-datagrid-pagination .total');
+            }).then(function (totalElements) {
+                expect(totalElements[0].getText()).toBe('1 - 4 of 4');
+            });
+        });
+    });
+});
+//# sourceMappingURL=filterViewSpec.js.map

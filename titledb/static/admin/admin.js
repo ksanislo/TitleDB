@@ -1,0 +1,494 @@
+var myApp = angular.module('myApp', ['ng-admin']);
+myApp.config(['NgAdminConfigurationProvider', function (nga) {
+    // create an admin application
+    var admin = nga.application('TitleDB')
+      .baseApiUrl('http://api.titledb.com/v1/'); // main API endpoint
+    // create a user entity
+    // the API endpoint for this entity will be 'http://dev.titledb.com/v1/entry/:id
+    var entry = nga.entity('entry');
+    // set the fields of the user entity list view
+    entry.listView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('name'),
+        nga.field('author'),
+        nga.field('headline'),
+        nga.field('url'),
+     ]).sortDir('ASC').sortField('name');
+
+     entry.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('name'),
+        nga.field('author'),
+        nga.field('headline'),
+        nga.field('description', 'text'),
+        nga.field('url'),
+        nga.field('category_id', 'reference')
+            .targetEntity(nga.entity('category'))
+            .targetField(nga.field('name'))
+            .label('Category'),
+        nga.field('created_at'),
+        nga.field('updated_at'),
+        nga.field('cia', 'referenced_list')
+            .targetEntity(nga.entity('cia'))
+            .targetReferenceField('entry_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name_s'),
+                nga.field('titleid'),
+                nga.field('version')
+            ]),
+         nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('entry_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('arm9', 'referenced_list')
+            .targetEntity(nga.entity('arm9'))
+            .targetReferenceField('entry_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+    ]);
+
+     entry.editionView().fields([
+        nga.field('active' ,'boolean')
+            .validation({ required: true }),
+        nga.field('name')
+            .validation({ required: true }),
+        nga.field('author')
+            .validation({ required: true }),
+        nga.field('headline')
+            .validation({ required: true }),
+        nga.field('description', 'text')
+            .validation({ required: true }),
+        nga.field('url')
+            .validation({ required: true }),
+        nga.field('category_id', 'reference')
+            .validation({ required: true })
+            .targetEntity(nga.entity('category'))
+            .targetField(nga.field('name'))
+            .label('Category'),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false),
+        nga.field('cia', 'referenced_list')
+            .targetEntity(nga.entity('cia'))
+            .targetReferenceField('entry_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name_s'),
+                nga.field('titleid'),
+                nga.field('version')
+            ]),
+         nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('entry_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('arm9', 'referenced_list')
+            .targetEntity(nga.entity('arm9'))
+            .targetReferenceField('entry_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+    ]);
+
+     entry.creationView().fields([
+        nga.field('active' ,'boolean')
+            .validation({ required: true })
+            .defaultValue(true),
+        nga.field('name')
+            .validation({ required: true }),
+        nga.field('author')
+            .validation({ required: true }),
+        nga.field('headline')
+            .validation({ required: true }),
+        nga.field('description', 'wysiwyg')
+            .validation({ required: true })
+            .stripTags(true),
+        nga.field('url')
+            .validation({ required: true }),
+        nga.field('category_id', 'reference')
+            .validation({ required: true })
+            .targetEntity(nga.entity('category'))
+            .targetField(nga.field('name'))
+            .label('Category')
+    ]);
+     // add the user entity to the admin application
+    admin.addEntity(entry);
+
+    var cia = nga.entity('cia');
+    // set the fields of the user entity list view
+    cia.listView().fields([
+        nga.field('id'),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry'),
+        nga.field('name_s'),
+        nga.field('publisher'),
+        nga.field('titleid'),
+        nga.field('version')
+    ]); 
+
+    cia.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('path'),
+        nga.field('sha256'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry'),
+        nga.field('assets_id', 'reference')
+            .targetEntity(nga.entity('assets'))
+            .targetField(nga.field('id'))
+            .label('Assets'),
+        nga.field('titleid'),
+        nga.field('name_s'),
+        nga.field('name_l'),
+        nga.field('publisher'),
+        nga.field('created_at'),
+        nga.field('updated_at')
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(cia);
+
+    var tdsx = nga.entity('tdsx');
+    // set the fields of the user entity list view
+    tdsx.listView().fields([
+        nga.field('id'),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry'),
+        nga.field('path'),
+        nga.field('version')
+    ]); 
+
+    tdsx.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('path'),
+        nga.field('sha256'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry'),
+        nga.field('smdh_id', 'reference')
+            .targetEntity(nga.entity('smdh'))
+            .targetField(nga.field('path'))
+            .label('SMDH'),
+        nga.field('xml_id', 'reference')
+            .targetEntity(nga.entity('xml'))
+            .targetField(nga.field('path'))
+            .label('XML'),
+        nga.field('assets_id', 'reference')
+            .targetEntity(nga.entity('assets'))
+            .targetField(nga.field('id'))
+            .label('Assets'),
+        nga.field('created_at'),
+        nga.field('updated_at')
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(tdsx);
+
+    var smdh = nga.entity('smdh');
+    // set the fields of the user entity list view
+    smdh.listView().fields([
+        nga.field('id'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('version')
+    ]); 
+
+    smdh.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('path'),
+        nga.field('sha256'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('created_at'),
+        nga.field('updated_at'),
+        nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('smdh_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+    ]);
+    // add the user entity to the admin application
+    admin.addEntity(smdh);
+
+    var xml = nga.entity('xml');
+    // set the fields of the user entity list view
+    xml.listView().fields([
+        nga.field('id'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('version')
+    ]); 
+
+    xml.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('path'),
+        nga.field('sha256'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('created_at'),
+        nga.field('updated_at'),
+        nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('xml_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+    ]);
+    // add the user entity to the admin application
+    admin.addEntity(xml);
+
+    var arm9 = nga.entity('arm9');
+    // set the fields of the user entity list view
+    arm9.listView().fields([
+        nga.field('id'),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry'),
+        nga.field('path'),
+        nga.field('version')
+    ]); 
+
+    arm9.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('path'),
+        nga.field('sha256'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('entry_id', 'reference')
+            .targetEntity(nga.entity('entry'))
+            .targetField(nga.field('name'))
+            .label('Entry'),
+        nga.field('assets_id', 'reference')
+            .targetEntity(nga.entity('assets'))
+            .targetField(nga.field('id'))
+            .label('Assets'),
+        nga.field('created_at'),
+        nga.field('updated_at')
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(arm9);
+
+    var category = nga.entity('category');
+    // set the fields of the user entity list view
+    category.listView().fields([
+        nga.field('id'),
+        nga.field('name')
+    ]); 
+
+    category.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('name'),
+        nga.field('created_at'),
+        nga.field('updated_at'),
+        nga.field('entry', 'referenced_list')
+            .targetEntity(nga.entity('entry'))
+            .targetReferenceField('category_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name'),
+                nga.field('author'),
+                nga.field('headline')
+            ])
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(category);
+
+    var url = nga.entity('url');
+    // set the fields of the user entity list view
+    url.listView().fields([
+        nga.field('id'),
+        nga.field('url'),
+        nga.field('content_type'),
+        nga.field('filename'),
+    ]); 
+
+    url.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('filename'),
+        nga.field('sha256'),
+        nga.field('url'),
+        nga.field('content_type'),
+        nga.field('etag'),
+        nga.field('created_at'),
+        nga.field('updated_at'),
+        nga.field('cia', 'referenced_list')
+            .targetEntity(nga.entity('cia'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name_s'),
+                nga.field('titleid'),
+                nga.field('version')
+            ]),
+         nga.field('tdsx', 'referenced_list')
+            .targetEntity(nga.entity('tdsx'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('smdh', 'referenced_list')
+            .targetEntity(nga.entity('smdh'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('xml', 'referenced_list')
+            .targetEntity(nga.entity('xml'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ]),
+         nga.field('arm9', 'referenced_list')
+            .targetEntity(nga.entity('arm9'))
+            .targetReferenceField('url_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('path'),
+                nga.field('version')
+            ])
+      ]);
+    // add the user entity to the admin application
+    admin.addEntity(url);
+
+    var assets = nga.entity('assets');
+    // set the fields of the user entity list view
+    assets.listView().fields([
+        nga.field('id'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('version')
+    ]); 
+
+    assets.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('version'),
+        nga.field('size'),
+        nga.field('mtime'),
+        nga.field('path'),
+        nga.field('sha256'),
+        nga.field('url_id', 'reference')
+            .targetEntity(nga.entity('url'))
+            .targetField(nga.field('url'))
+            .label('URL'),
+        nga.field('created_at'),
+        nga.field('updated_at')
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(assets);
+
+
+    var submission = nga.entity('submission');
+    // set the fields of the user entity list view
+    submission.listView().fields([
+        nga.field('id'),
+        nga.field('url'),
+        nga.field('status'),
+    ]); 
+
+    submission.creationView().fields([
+        nga.field('url')
+    ]);
+
+    submission.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('url'),
+        nga.field('status'),
+        nga.field('created_at'),
+        nga.field('updated_at')
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(submission);
+
+    // attach the admin application to the DOM and execute it
+    nga.configure(admin);
+}]);
+
+myApp.config(['RestangularProvider', function (RestangularProvider) {
+    RestangularProvider.addFullRequestInterceptor(function(element, operation, what, url, headers, params) {
+        if (operation == "getList") {
+            //delete params._page;
+            //delete params._perPage;
+            //delete params._sortField;
+            //delete params._sortDir;
+            params.nested = "false";
+        }
+        return { params: params };
+    });
+}]);

@@ -1,0 +1,93 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = maChoiceField;
+function updateChoices(scope, choices) {
+    scope.choices = choices;
+    scope.$root.$$phase || scope.$digest();
+}
+
+function maChoiceField($compile) {
+    return {
+        scope: {
+            'field': '&',
+            'value': '=',
+            'entry': '=?',
+            'datastore': '&?',
+            'refresh': '&',
+            'choices': '&?'
+        },
+        restrict: 'E',
+        compile: function compile() {
+            return {
+                pre: function pre(scope, element) {
+                    var field = scope.field();
+                    var attributes = field.attributes();
+                    scope.placeholder = attributes && attributes.placeholder || 'FILTER_VALUES';
+                    scope.name = field.name();
+                    scope.v = field.validation();
+                    scope.$watch('value', function (newValue, oldValue) {
+                        if (newValue !== oldValue && newValue === undefined) {
+                            // fix for https://github.com/angular-ui/ui-select/issues/863
+                            scope.value = null;
+                        }
+                    });
+
+                    var refreshAttributes = '';
+                    var itemsFilter = '| filter: {label: $select.search}';
+                    if (field.type().indexOf('reference') === 0 && field.remoteComplete()) {
+                        // FIXME wrong place to do that
+                        scope.refreshDelay = field.remoteCompleteOptions().refreshDelay;
+                        refreshAttributes = 'refresh-delay="refreshDelay" refresh="refresh({ $search: $select.search })"';
+                        itemsFilter = '';
+                    }
+
+                    var choices = scope.choices ? scope.choices : field.choices ? field.choices() : [];
+                    var choicesFactory = void 0;
+
+                    if (typeof choices === 'function' && choices(scope.entry)) {
+                        choicesFactory = choices;
+                        scope.choices = choicesFactory(scope.entry);
+                    } else {
+                        scope.choices = choices ? choices : [];
+                    }
+
+                    var template = '\n                        <ui-select ng-model="$parent.value" ng-required="v.required" id="{{ name }}" name="{{ name }}">\n                            <ui-select-match allow-clear="{{ !v.required }}" placeholder="{{ placeholder | translate }}">{{ $select.selected.label | translate }}</ui-select-match>\n                            <ui-select-choices ' + refreshAttributes + ' repeat="item.value as item in choices ' + itemsFilter + ' track by $index">\n                                {{ item.label | translate }}\n                            </ui-select-choices>\n                        </ui-select>';
+
+                    // as choices may be a function depending of another entry field, we need to watch the whole entry
+                    scope.$watch('entry', function (newEntry, oldEntry) {
+                        if (!choicesFactory) {
+                            return;
+                        }
+
+                        var oldChoices = scope.choices;
+                        scope.choices = choicesFactory(newEntry);
+                        if (!angular.equals(scope.choices, oldChoices)) {
+                            scope.value = null;
+                        }
+                    }, true);
+
+                    element.html(template);
+
+                    var select = element.children()[0];
+                    for (var name in attributes) {
+                        select.setAttribute(name, attributes[name]);
+                    }
+
+                    $compile(element.contents())(scope);
+                },
+                post: function post(scope) {
+                    scope.$on('choices:update', function (e, data) {
+                        updateChoices(scope, data.choices);
+                    });
+                }
+            };
+        }
+    };
+}
+
+maChoiceField.$inject = ['$compile'];
+module.exports = exports['default'];
+//# sourceMappingURL=maChoiceField.js.map

@@ -1,0 +1,108 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = maMenuBar;
+
+var _menuBar = require('../../view/menuBar.html');
+
+var _menuBar2 = _interopRequireDefault(_menuBar);
+
+var _angular = require('angular');
+
+var _angular2 = _interopRequireDefault(_angular);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function maMenuBar($location, $rootScope, $compile) {
+    return {
+        restrict: 'E',
+        scope: {
+            'menu': '&'
+        },
+        link: function link(scope, element) {
+            scope.menu = scope.menu();
+            scope.path = $location.path();
+            // initialize openMenus
+            var openMenus = scope.menu.children().filter(function (menu) {
+                return menu.isChildActive(scope.path);
+            });
+            // manually render on change to avoid checking menu.isActive at each dirty check
+            var listener = $rootScope.$on('$locationChangeSuccess', function () {
+                scope.path = $location.path();
+                render();
+            });
+            $rootScope.$on('$destroy', listener);
+            scope.toggleMenu = function (menu) {
+                // handle click on parent menu manually
+                // because we chose bindOnce in the template for performance reasons
+                if (openMenus.indexOf(menu) !== -1) {
+                    // menu is already open, the click closes it
+                    // except if a submenu is open
+                    if (menu.isChildActive(scope.path)) {
+                        return;
+                    }
+                    openMenus.splice(openMenus.indexOf(menu), 1);
+                    closeMenu(menu);
+                } else {
+                    // menu is closed, the click opens it
+                    openMenus.push(menu);
+                    openMenu(menu);
+                }
+                // we don't render() in that case because it would cut the animation
+                return;
+            };
+            scope.activateLink = function (menu) {
+                if (!menu.link()) {
+                    return;
+                }
+                // close all open menus
+                // no need to close the menus with animation using closeMenu(),
+                // the menu will rerender anyway because of the listener on $locationChangeSuccess
+                // so the animation don't work in that case
+                if (menu.autoClose()) {
+                    openMenus = [];
+                }
+            };
+            scope.isOpen = function (menu) {
+                return menu.isChildActive(scope.path) || openMenus.indexOf(menu) !== -1;
+            };
+            render();
+
+            function render() {
+                element.html(_menuBar2.default);
+                $compile(element.contents())(scope);
+            }
+            function closeMenu(menu) {
+                var elements = getElementsForMenu(menu);
+                elements.ul.addClass('collapsed');
+                elements.arrow.removeClass('glyphicon-menu-down');
+                elements.arrow.addClass('glyphicon-menu-right');
+            }
+            function openMenu(menu) {
+                var elements = getElementsForMenu(menu);
+                elements.ul.removeClass('collapsed');
+                elements.arrow.removeClass('glyphicon-menu-right');
+                elements.arrow.addClass('glyphicon-menu-down');
+            }
+            function getElementsForMenu(menu) {
+                var parentLi;
+                _angular2.default.forEach(element.find('li'), function (li) {
+                    var liElement = _angular2.default.element(li);
+                    if (liElement.attr('data-menu-id') == menu.uuid) {
+                        parentLi = liElement;
+                    }
+                });
+                return {
+                    arrow: _angular2.default.element(parentLi.find('a')[0].getElementsByClassName('arrow')[0]),
+                    ul: parentLi.find('ul').eq(0)
+                };
+            }
+        }
+    };
+}
+
+maMenuBar.$inject = ['$location', '$rootScope', '$compile'];
+module.exports = exports['default'];
+//# sourceMappingURL=maMenuBar.js.map
