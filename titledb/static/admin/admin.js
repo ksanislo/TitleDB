@@ -58,6 +58,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
     ]);
 
      entry.editionView().fields([
+        nga.field('id').editable(false),
         nga.field('active' ,'boolean')
             .validation({ required: true }),
         nga.field('name')
@@ -322,6 +323,9 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetEntity(nga.entity('url'))
             .targetField(nga.field('url'))
             .label('URL'),
+        nga.field('name_s'),
+        nga.field('name_l'),
+        nga.field('publisher'),
         nga.field('created_at'),
         nga.field('updated_at'),
         nga.field('tdsx', 'referenced_list')
@@ -348,6 +352,9 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetField(nga.field('url'))
             .label('URL')
             .editable(false),
+        nga.field('name_s').editable(false),
+        nga.field('name_l').editable(false),
+        nga.field('publisher').editable(false),
         nga.field('created_at').editable(false),
         nga.field('updated_at').editable(false),
         nga.field('tdsx', 'referenced_list')
