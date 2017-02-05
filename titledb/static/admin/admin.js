@@ -75,7 +75,10 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .validation({ required: true })
             .targetEntity(nga.entity('category'))
             .targetField(nga.field('name'))
-            .label('Category'),
+            .label('Category')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000),
         nga.field('created_at').editable(false),
         nga.field('updated_at').editable(false),
         nga.field('cia', 'referenced_list')
@@ -124,6 +127,9 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetEntity(nga.entity('category'))
             .targetField(nga.field('name'))
             .label('Category')
+            .remoteComplete(false)
+            .sortField('name')
+            .perPage(5000)
     ]);
      // add the user entity to the admin application
     admin.addEntity(entry);
@@ -140,7 +146,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('publisher'),
         nga.field('titleid'),
         nga.field('version')
-    ]); 
+    ]).sortDir('ASC').sortField('name_s'); 
 
     cia.showView().fields([
         nga.field('id'),
@@ -218,7 +224,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .label('Entry'),
         nga.field('path'),
         nga.field('version')
-    ]); 
+    ]).sortDir('ASC').sortField('path'); 
 
     tdsx.showView().fields([
         nga.field('id'),
@@ -278,14 +284,14 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetField(nga.field('path'))
             .label('SMDH')
             .remoteComplete(false)
-            .sortField('name')
+            .sortField('path')
             .perPage(5000),
         nga.field('xml_id', 'reference')
             .targetEntity(nga.entity('xml'))
             .targetField(nga.field('path'))
             .label('XML')
             .remoteComplete(false)
-            .sortField('name')
+            .sortField('path')
             .perPage(5000),
         nga.field('assets_id', 'reference')
             .targetEntity(nga.entity('assets'))
@@ -304,12 +310,13 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
     // set the fields of the user entity list view
     smdh.listView().fields([
         nga.field('id'),
+        nga.field('name_s'),
         nga.field('url_id', 'reference')
             .targetEntity(nga.entity('url'))
             .targetField(nga.field('url'))
             .label('URL'),
         nga.field('version')
-    ]); 
+    ]).sortDir('ASC').sortField('name_s'); 
 
     smdh.showView().fields([
         nga.field('id'),
@@ -373,12 +380,13 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
     // set the fields of the user entity list view
     xml.listView().fields([
         nga.field('id'),
+        nga.field('path'),
         nga.field('url_id', 'reference')
             .targetEntity(nga.entity('url'))
             .targetField(nga.field('url'))
             .label('URL'),
         nga.field('version')
-    ]); 
+    ]).sortDir('ASC').sortField('path'); 
 
     xml.showView().fields([
         nga.field('id'),
@@ -442,7 +450,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .label('Entry'),
         nga.field('path'),
         nga.field('version')
-    ]); 
+    ]).sortDir('ASC').sortField('path'); 
 
     arm9.showView().fields([
         nga.field('id'),
@@ -494,7 +502,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetField(nga.field('id'))
             .label('Assets')
             .remoteComplete(false)
-            .sortField('name')
+            .sortField('id')
             .perPage(5000),
         nga.field('created_at').editable(false),
         nga.field('updated_at').editable(false)
@@ -507,7 +515,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
     category.listView().fields([
         nga.field('id'),
         nga.field('name')
-    ]); 
+    ]).sortDir('ASC').sortField('name'); 
 
     category.showView().fields([
         nga.field('id'),
@@ -555,6 +563,59 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
     // add the user entity to the admin application
     admin.addEntity(category);
 
+    var status = nga.entity('status');
+    // set the fields of the user entity list view
+    status.listView().fields([
+        nga.field('id'),
+        nga.field('name')
+    ]).sortDir('ASC').sortField('name'); 
+
+    status.showView().fields([
+        nga.field('id'),
+        nga.field('active'),
+        nga.field('name'),
+        nga.field('created_at'),
+        nga.field('updated_at'),
+        nga.field('entry', 'referenced_list')
+            .targetEntity(nga.entity('entry'))
+            .targetReferenceField('status_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name'),
+                nga.field('author'),
+                nga.field('headline')
+            ])
+     ]);
+
+     status.editionView().fields([
+        nga.field('id').editable(false),
+        nga.field('active', 'boolean')
+           .validation({ required: true }),
+        nga.field('name')
+           .validation({ required: true }),
+        nga.field('created_at').editable(false),
+        nga.field('updated_at').editable(false),
+        nga.field('entry', 'referenced_list')
+            .targetEntity(nga.entity('entry'))
+            .targetReferenceField('status_id')
+            .targetFields([
+                nga.field('id'),
+                nga.field('name'),
+                nga.field('author'),
+                nga.field('headline')
+            ])
+     ]);
+
+     status.creationView().fields([
+        nga.field('active', 'boolean')
+            .validation({ required: true })
+            .defaultValue(true),
+        nga.field('name')
+            .validation({ required: true })
+     ]);
+    // add the user entity to the admin application
+    admin.addEntity(status);
+
     var url = nga.entity('url');
     // set the fields of the user entity list view
     url.listView().fields([
@@ -562,7 +623,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('url'),
         nga.field('content_type'),
         nga.field('filename'),
-    ]); 
+    ]).sortDir('ASC').sortField('url'); 
 
     url.showView().fields([
         nga.field('id'),
@@ -688,7 +749,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetField(nga.field('url'))
             .label('URL'),
         nga.field('version')
-    ]); 
+    ]).sortDir('ASC').sortField('id'); 
 
     assets.showView().fields([
         nga.field('id'),
@@ -715,7 +776,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         nga.field('id'),
         nga.field('url'),
         nga.field('status'),
-    ]); 
+    ]).sortDir('ASC').sortField('id'); 
 
     submission.creationView().fields([
         nga.field('url')

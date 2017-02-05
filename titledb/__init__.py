@@ -71,6 +71,8 @@ def main(global_config, **settings):
     config.add_route('assets_collection_v1', '/v1/assets')
     config.add_route('category_v1', '/v1/category/{id:\d+}')
     config.add_route('category_collection_v1', '/v1/category')
+    config.add_route('status_v1', '/v1/status/{id:\d+}')
+    config.add_route('status_collection_v1', '/v1/status')
     config.add_route('submission_v1', '/v1/submission/{id:\d+}')
     config.add_route('submission_collection_v1', '/v1/submission')
 

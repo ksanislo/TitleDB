@@ -59,6 +59,8 @@ from .models import (
     AssetsSchemaModerator,
     Category,
     CategorySchema,
+    Status,
+    StatusSchema,
     Submission,
     SubmissionSchema,
     SubmissionSchemaEveryone,
@@ -311,6 +313,13 @@ class AssetsView(BaseView):
 class CategoryView(BaseView):
     item_cls = Category
     schema_cls = CategorySchema
+    moderator_cls = CategorySchema
+
+@register_views(route='status_v1', collection_route='status_collection_v1')
+class StatusView(BaseView):
+    item_cls = Status
+    schema_cls = StatusSchema
+    moderator_cls = StatusSchema
 
 @register_views(route='submission_v1', collection_route='submission_collection_v1')
 class SubmissionView(BaseView):
