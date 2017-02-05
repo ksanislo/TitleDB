@@ -2,7 +2,7 @@ var myApp = angular.module('myApp', ['ng-admin']);
 myApp.config(['NgAdminConfigurationProvider', function (nga) {
     // create an admin application
     var admin = nga.application('TitleDB')
-      .baseApiUrl('http://api.titledb.com/v1/'); // main API endpoint
+      .baseApiUrl('https://api.titledb.com/v1/'); // main API endpoint
     // create a user entity
     // the API endpoint for this entity will be 'http://dev.titledb.com/v1/entry/:id
     var entry = nga.entity('entry');
