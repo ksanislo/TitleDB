@@ -549,9 +549,20 @@ def decode_smdh_data(data):
     #               return None
 
     # The english description starts at SMDH offset 520, encoded UTF-16
-    name_s = data[520:520+128].decode('utf-16').rstrip('\0')
-    name_l = data[520+128:520+384].decode('utf-16').rstrip('\0')
-    publisher = data[520+384:520+512].decode('utf-16').rstrip('\0')
+    try:
+        name_s = data[520:520+128].decode('utf-16').rstrip('\0')
+    except UnicodeDecodeError:
+        name_s = "SMDH decode failed"
+
+    try:
+        name_l = data[520+128:520+384].decode('utf-16').rstrip('\0')
+    except UnicodeDecodeError:
+        name_l = "SMDH decode failed"
+
+    try:
+        publisher = data[520+384:520+512].decode('utf-16').rstrip('\0')
+    except UnicodeDecodeError:
+        publisher = "SMDH decode failed"
 
     # These are the SMDH icons, both small and large.
     icon_s = base64.b64encode(data[8256:8256+1152])
