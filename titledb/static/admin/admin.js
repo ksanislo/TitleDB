@@ -169,6 +169,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .targetField(nga.field('id'))
             .label('Assets'),
         nga.field('titleid'),
+        nga.field('titleversion'),
         nga.field('name_s'),
         nga.field('name_l'),
         nga.field('publisher'),
@@ -205,6 +206,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
             .sortField('id')
             .perPage(5000),
         nga.field('titleid').editable(false),
+        nga.field('titleversion').editable(false),
         nga.field('name_s').editable(false),
         nga.field('name_l').editable(false),
         nga.field('publisher').editable(false),

@@ -448,6 +448,12 @@ def process_cia(parent, relatives, cache_path, archive_path=None):
         except IndexError:
             return None
 
+        f.seek(11302)
+        try:
+            cia.titleversion = numpy.fromfile(f, dtype='>u2', count=1)[0]
+        except IndexError:
+            return None
+
         if cia.titleid[:8] == "00040000":
             cia.active = True
 
