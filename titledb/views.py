@@ -451,18 +451,16 @@ class TitleDBViews:
             sq = DBSession.query(CIA.entry_id, CIA.titleid, func.min(CIA.created_at).label('mca')).group_by(CIA.titleid).order_by(CIA.id).subquery()
             cia = DBSession.query(CIA).join(sq,and_(CIA.titleid==sq.c.titleid,CIA.entry_id==sq.c.entry_id)).filter(CIA.titleid.ilike(titleid)).filter(CIA.active==True).order_by(CIA.created_at.desc()).first()
             if cia:
-                if cia.path:
-                    # Verify cache file is there and valid.
-                    if verify_cache(cia, settings=request.registry.settings):
-                        return FileResponse(
-                                   os.path.join(url_to_cache_path(cia.url.url, request.registry.settings['titledb.cache']), 'archive_root', cia.path),
-                                   request=request,
-                                   content_type='application/x-3ds-archive'
-                               )
-                    else:
-                        return Response('404 Not Found', status='404 Not Found')
+                # Verify cache file is there and valid.
+                local_path = verify_cache(cia, settings=request.registry.settings)
+                if local_path:
+                    return FileResponse(
+                               local_path,
+                               request=request,
+                               content_type='application/x-3ds-archive'
+                           )
                 else:
-                    return HTTPFound(location=cia.url.url)
+                    return Response('404 Not Found', status='404 Not Found')
         return dict(error='TitleID not found.')
 
     @view_config(route_name='download_v1')
@@ -473,21 +471,17 @@ class TitleDBViews:
         switcher = {"cia": CIA, "tdsx": TDSX, "arm9": ARM9, "smdh": SMDH, "xml": XML}
         item = DBSession.query(switcher.get(item_table, None)).get(item_id)
         if item:
-            if item.path:
-                # Verify cache file is there and valid.
-                if verify_cache(item, settings=request.registry.settings):
-                    filename = item.path.split('/')[-1]
-                    response = FileResponse(
-                               os.path.join(url_to_cache_path(item.url.url, request.registry.settings['titledb.cache']), 'archive_root', item.path),
+            # Verify cache file is there and valid.
+            local_path = verify_cache(item, settings=request.registry.settings)
+            if local_path:
+                filename = local_path.split('/')[-1]
+                response = FileResponse(
+                               local_path,
                                request=request,
                                content_type=mimetypes.guess_type(filename)[0]
                            )
-                    response.content_disposition = 'attachment; filename="%s"' % filename
-                    return response
-                else:
-                    return Response('404 Not Found', status='404 Not Found')
-            else:
-                return HTTPFound(location=item.url.url)
+                response.content_disposition = 'attachment; filename="%s"' % filename
+                return response
         return Response('404 Not Found', status='404 Not Found')
 
     @view_config(route_name='time_v1')
